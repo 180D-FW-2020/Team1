@@ -2,10 +2,18 @@ import cv2
 import time
 import numpy as np
 import argparse
+import math
+
+POINTS = 'points'
+NPY = '.npy'
+DEBUG = 'debug'
+
+OFFSET = 10 # some predefined arbitrary number 
 
 parser = argparse.ArgumentParser(description='Run keypoint detection')
 parser.add_argument("--device", default="cpu", help="Device to inference on")
 parser.add_argument("--image_file", default="single.jpeg", help="Input image")
+parser.add_argument("--debug", default='', help="Debugging or not")
 
 args = parser.parse_args()
 
@@ -91,13 +99,32 @@ for pair in POSE_PAIRS:
         cv2.line(frame, points[partA], points[partB], (0, 255, 255), 2)
         cv2.circle(frame, points[partA], 8, (0, 0, 255), thickness=-1, lineType=cv2.FILLED)
 
-cv2.imshow('Output-Keypoints', frameCopy)
-cv2.imshow('Output-Skeleton', frame)
+# uncomment to see visual output
+#cv2.imshow('Output-Keypoints', frameCopy) 
+#cv2.imshow('Output-Skeleton', frame) 
+#cv2.waitKey(0)
 
-cv2.imwrite('Output-Keypoints.jpg', frameCopy)
-cv2.imwrite('Output-Skeleton.jpg', frame)
+print(points)
 
+points = np.array(points)
+
+# if we're debugging, save the current one as pointsdebug.npy and the previous one remains as points.npy
+if args.debug == '':
+    np.save(POINTS + NPY, points, allow_pickle=True) # allow_pickle=False is for security 
+    new_points = np.load(POINTS + DEBUG + NPY , allow_pickle=True) # allow_pickle=False is for security 
+    cv2.imwrite('Output-Keypoints-debug.jpg', frameCopy)
+    cv2.imwrite('Output-Skeleton-debug.jpg', frame)
+elif args.debug == 'Y':
+    np.save(POINTS + DEBUG + NPY , points, allow_pickle=True) # allow_pickle=False is for security 
+    new_points = np.load(POINTS + NPY, allow_pickle=True) # allow_pickle=False is for security 
+    cv2.imwrite('Output-Keypoints.jpg', frameCopy)  
+    cv2.imwrite('Output-Skeleton.jpg', frame)
+distance = 0
+for i in range(len(new_points)):
+    if (points[i] == None and new_points[i] != None) or (points[i] != None and new_points[i] == None):
+        distance += OFFSET #arbitrary, subject to change
+    elif points[i] != None and new_points[i] != None:
+        distance += math.sqrt((points[i][0]-new_points[i][0])**2+(points[i][1]-new_points[i][1])**2) #euclidian 
+
+print("Total \"distance\" from regular picture to debug picture is {}".format(distance))
 print("Total time taken : {:.3f}".format(time.time() - t))
-
-cv2.waitKey(0)
-
