@@ -67,7 +67,7 @@ class PoseEstimation():
         self.H = self.output.shape[2]
         self.W = self.output.shape[3]
     
-    def getPoints(self):
+    def __getPoints(self):
         self.__readImg()
 
         points = []
@@ -98,13 +98,13 @@ class PoseEstimation():
         return points
 
     def printPoints(self):
-        print(self.getPoints())
+        print(self.__getPoints())
         cv2.imshow('Output-Points', self.frameCopy)
         cv2.waitKey(0)
         cv2.imwrite('Output-Points.jpg', self.frameCopy)
 
     def printSkeleton(self):
-        points = self.getPoints()
+        points = self.__getPoints()
         print(points)
 
         # Draw skeleton
@@ -121,10 +121,10 @@ class PoseEstimation():
         cv2.imwrite('Output-Skeleton.jpg', self.frame)
     
     def printContour(self):
-        points = self.getPoints()
+        points = self.__getPoints()
         print(points)
 
-        img = np.zeros((self.H,self.W,3))
+        img = np.zeros((self.frameHeight,self.frameWidth,3))
 
         # Draw contour
         for pair in self.POSE_PAIRS:
@@ -132,7 +132,7 @@ class PoseEstimation():
             partB = pair[1]
 
             if points[partA] and points[partB]:
-                cv2.line(img, points[partA], points[partB], (255, 255, 255), thickness=100, lineType=cv2.FILLED)
+                cv2.line(img, points[partA], points[partB], (255, 255, 255), thickness=90, lineType=cv2.FILLED)
             
         cv2.imshow('Output-Contour', img)
         cv2.waitKey(0) 

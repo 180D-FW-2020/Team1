@@ -5,4 +5,4 @@ import numpy as np
 
 pose = PoseEstimation()
 
-pose.printContour()
+pose.printSkeleton()
