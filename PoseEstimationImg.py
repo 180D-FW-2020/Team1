@@ -103,9 +103,9 @@ class PoseEstimation():
         cv2.waitKey(0)
         cv2.imwrite('Output-Points.jpg', self.frameCopy)
 
-    def printSkeleton(self):
+    def printSkeleton(self, show = 1):
         points = self.__getPoints()
-        print(points)
+        #print(points)
 
         # Draw skeleton
         for pair in self.POSE_PAIRS:
@@ -115,11 +115,11 @@ class PoseEstimation():
             if points[partA] and points[partB]:
                 cv2.line(self.frame, points[partA], points[partB], (0, 255, 255), 2)
                 cv2.circle(self.frame, points[partA], 8, (0, 0, 255), thickness=-1, lineType=cv2.FILLED)
-
-        cv2.imshow('Output-Skeleton', self.frame)
-        cv2.waitKey(0)
-        cv2.imwrite('Output-Skeleton.jpg', self.frame)
-    
+        if show:
+            cv2.imshow('Output-Skeleton', self.frame)
+            cv2.waitKey(0)
+            cv2.imwrite('Output-Skeleton.jpg', self.frame)
+        
     def printContour(self):
         points = self.__getPoints()
         print(points)
@@ -137,9 +137,33 @@ class PoseEstimation():
         cv2.imshow('Output-Contour', img)
         cv2.waitKey(0) 
         cv2.imwrite('Output-Contour.jpg', img)
+    
+    def getVideo():
+        return self.cap
+    def testScoring(self):
+        #cap = cv2.VideoCapture(0)
+        cap = getVideo()
+        w = 640 #cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+        h = 480 #cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+        print(w,h)
+        while True:
+            #_, frame = cap.read()
+            #self.printSkeleton(show=0)
+            # start geeksforgeeks https://www.geeksforgeeks.org/python-opencv-cv2-circle-method/
+            center_coordinates = (int(w/2), int(h/2)) 
+            radius = 100
+            color = (255,0,0)
+            thickness = 2
+            self.frame = cv2.circle(self.frame, center_coordinates, radius, color, thickness)
+            cv2.imshow('Output-Points', self.frame)
+            if cv2.waitKey(1) == ord('q'):
+                break
+        self.cap.release()
+        cv2.destroyAllWindows()
+
 
     def __del__(self):
-        self.cap.release()
+        #self.cap.release()
         cv2.destroyAllWindows()
 
 """

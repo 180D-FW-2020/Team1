@@ -1,2 +1,6 @@
-
+.vs
+.vscode
+*.npy
+*.jpeg
 *.caffemodel
+__pycache__
