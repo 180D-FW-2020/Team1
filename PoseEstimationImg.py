@@ -38,88 +38,6 @@ class PoseEstimation():
         # @NOTE else we can integrate into rest of code
 
     """
-    showContours(self, frame): make the contours 
-    input: 
-        frame -> the video frame that we want the contour to go on top of
-    output: 
-        frame -> a modified frame with a contour on it
-    @TODO: create contour logic 
-    """
-    def showContours(self, frame):
-        return frame
-    
-    """
-    scoreTally(self, points, contour): tally the points that a user gets in a specific turn 
-    input: 
-        points -> the points that openPose returns
-        contour -> the contour used for the specific case 
-    output: 
-        score -> the score for the inputted points + contour combination
-    @TODO: implement scoring tally
-    """
-    def scoreTally(self, points, contour):
-        return 0
-
-    """
-    showScore(self, frame): show the score
-    input: 
-        frame -> the video frame that we want the score to go on top of
-    output: 
-        frame -> the modified frame with the score on it
-    @TODO: 
-    @NOTE: 
-    @NOTE: 
-    """
-    def showScore(self, frame):
-        cv2.putText(frame, "Score: {}".format(self.score), (500, 50), cv2.FONT_HERSHEY_COMPLEX, .8, (255, 50, 0), 2, lineType=cv2.LINE_AA)
-        return frame
-    
-    """
-    showTime(self, frame): show the time remaining  
-    input: 
-        frame -> the video frame that we want the score to go on top of
-    output: 
-        frame -> the modified frame with the score on it
-    @TODO: implement timinig mechanism
-    @NOTE: already have some code written for it so I can get this done
-    @NOTE: also may be something that'll probably be overridden later 
-    """
-    def showTime(self, frame, start_time):
-        time_remaining = TIMER_THRESHOLD - int(time.perf_counter()-start_time)
-        cv2.putText(frame, "Time Remaining: {}".format(time_remaining), (50, 50), cv2.FONT_HERSHEY_COMPLEX, .8, (255, 50, 0), 2, lineType=cv2.LINE_AA)
-
-        return frame, time_remaining
-    
-    """
-    buildSkeleton(self, show = 1): build the skeleton of points (with the points and lines between them) and, for debugging, show 
-    input: 
-        frame -> the video frame that we want the skeleton to go on top of
-        show -> debugging to show the skeleton only 
-    output: 
-        frame -> the modified frame with the score on it
-        points -> the OpenPose output points
-    @TODO: 
-    @NOTE: 
-    @NOTE: 
-    """
-    def buildSkeleton(self, frame, show = 0, lines = False):
-        _, points = self.getPoints(frame)
-
-        # Draw skeleton
-        for pair in self.POSE_PAIRS:
-            partA = pair[0]
-            partB = pair[1]
-
-            if points[partA] and points[partB]:
-                if lines:
-                    cv2.line(frame, points[partA], points[partB], (0, 255, 255), 2)
-                cv2.circle(frame, points[partA], 8, (0, 0, 255), thickness=-1, lineType=cv2.FILLED)
-        if show:
-            cv2.imshow('Output-Skeleton', frame)
-            cv2.waitKey(0)
-        return frame, points
-
-    """
     getPoints(self, frame, dots=True, dotsVals=False): Return the points from OpenPose 
     input: 
         frame -> the video frame that we want the skeleton to go on top of
@@ -169,6 +87,104 @@ class PoseEstimation():
                 points.append(None)
 
         return frame, points
+
+    """
+    buildSkeleton(self, frame, show = False, lines = False): build the skeleton of points (with the points and lines between them) and, for debugging, show 
+    input: 
+        frame -> the video frame that we want the skeleton to go on top of
+        show -> debugging to show the skeleton only 
+    output: 
+        frame -> the modified frame with the score on it
+        points -> the OpenPose output points
+    @TODO: 
+    @NOTE: 
+    @NOTE: 
+    """
+    def buildSkeleton(self, frame, show = False, lines = False):
+        _, points = self.getPoints(frame)
+
+        # Draw skeleton
+        for pair in self.POSE_PAIRS:
+            partA = pair[0]
+            partB = pair[1]
+
+            if points[partA] and points[partB]:
+                if lines:
+                    cv2.line(frame, points[partA], points[partB], (0, 255, 255), 2)
+                cv2.circle(frame, points[partA], 8, (0, 0, 255), thickness=-1, lineType=cv2.FILLED)
+        if show:
+            cv2.imshow('Output-Skeleton', frame)
+            cv2.waitKey(0)
+        return frame, points
+
+    """
+    showContours(self, frame, show = False): Make the contours 
+    input: 
+        frame -> the video frame that we want the skeleton to go on top of
+        show -> debugging to show the skeleton only 
+    output: 
+        frame -> the modified frame with the score on it
+        points -> the OpenPose output points
+    @TODO: create contour logic 
+    """
+    def showContours(self, frame, show = False):
+        _, points = self.getPoints(frame)
+
+        for pair in self.POSE_PAIRS:
+            partA = pair[0]
+            partB = pair[1]
+
+            if points[partA] and points[partB]:
+                cv2.line(img, points[partA], points[partB], (255, 255, 255), thickness=90, lineType=cv2.FILLED)
+        
+        if(show):
+            cv2.imshow('Output-Contour', img)
+            cv2.waitKey(0) 
+        cv2.imwrite('Output-Contour.jpg', img)
+
+        return frame, points
+    
+    """
+    scoreTally(self, points, contour): tally the points that a user gets in a specific turn 
+    input: 
+        points -> the points that openPose returns
+        contour -> the contour used for the specific case 
+    output: 
+        score -> the score for the inputted points + contour combination
+    @TODO: implement scoring tally
+    """
+    def scoreTally(self, points, contour):
+        return 0
+
+    """
+    showScore(self, frame): show the score
+    input: 
+        frame -> the video frame that we want the score to go on top of
+    output: 
+        frame -> the modified frame with the score on it
+    @TODO: 
+    @NOTE: 
+    @NOTE: 
+    """
+    def showScore(self, frame):
+        cv2.putText(frame, "Score: {}".format(self.score), (500, 50), cv2.FONT_HERSHEY_COMPLEX, .8, (255, 50, 0), 2, lineType=cv2.LINE_AA)
+        return frame
+    
+    """
+    showTime(self, frame, start_time): show the time remaining  
+    input: 
+        frame -> the video frame that we want the score to go on top of
+    output: 
+        frame -> the modified frame with the score on it
+    @TODO: implement timinig mechanism
+    @NOTE: already have some code written for it so I can get this done
+    @NOTE: also may be something that'll probably be overridden later 
+    """
+    def showTime(self, frame, start_time):
+        time_remaining = TIMER_THRESHOLD - int(time.perf_counter()-start_time)
+        cv2.putText(frame, "Time Remaining: {}".format(time_remaining), (50, 50), cv2.FONT_HERSHEY_COMPLEX, .8, (255, 50, 0), 2, lineType=cv2.LINE_AA)
+
+        return frame, time_remaining
     
     """
     startUI(self): the overall handler for the output to user  
