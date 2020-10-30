@@ -1,21 +1,14 @@
 import cv2
 import time
 import numpy as np
-import argparse
-import math
-
-""" parser = argparse.ArgumentParser(description='Run keypoint detection')
-parser.add_argument("--device", default="cpu", help="Device to inference on")
-parser.add_argument("--image_file", default="single.jpeg", help="Input image")
-parser.add_argument("--debug", default='', help="Debugging or not")
-
-args = parser.parse_args() """
 
 TIMER_THRESHOLD = 3
 
 class PoseEstimation():
-    # constructor 
     def __init__(self, mode = "MPI", device = "cpu"):
+        """"
+        Constructor
+        """"
         self.mode = mode
         # Select model/specify paths
         if self.mode == "MPI":
@@ -42,91 +35,21 @@ class PoseEstimation():
         self.cap = cv2.VideoCapture(0)
         self.score = 0
         # @NOTE would want voice + gesture objects here if possible 
-        # @NOTE else we can integrate into rest of code 
-    """
-    showContours(self, frame): make the contours 
-    input: 
-        frame -> the video frame that we want the contour to go on top of
-    output: 
-        frame -> a modified frame with a contour on it
-    @TODO: create contour logic 
-    """
-    def showContours(self, frame):
-        
-        return frame
-    
-    """
-    scoreTally(self, points, contour): tally the points that a user gets in a specific turn 
-    input: 
-        points -> the points that openPose returns
-        contour -> the contour used for the specific case 
-    output: 
-        score -> the score for the inputted points + contour combination
-    @TODO: implement scoring tally
-    """
-    def scoreTally(self, points, contour):
-
-        return 0
+        # @NOTE else we can integrate into rest of code
 
     """
-    showScore(self, frame): show the score
-    input: 
-        frame -> the video frame that we want the score to go on top of
-    output: 
-        frame -> the modified frame with the score on it
-    @TODO: 
-    @NOTE: 
-    @NOTE: 
-    """
-    def showScore(self, frame):
-        cv2.putText(frame, "Score: {}".format(self.score), (500, 50), cv2.FONT_HERSHEY_COMPLEX, .8, (255, 50, 0), 2, lineType=cv2.LINE_AA)
-        return frame
-    
-
-    """
-    showTime(self, frame): show the time remaining  
-    input: 
-        frame -> the video frame that we want the score to go on top of
-    output: 
-        frame -> the modified frame with the score on it
-    @TODO: implement timinig mechanism
-    @NOTE: already have some code written for it so I can get this done
-    @NOTE: also may be something that'll probably be overridden later 
-    """
-    def showTime(self, frame, start_time):
-        time_remaining = TIMER_THRESHOLD - int(time.perf_counter()-start_time)
-        cv2.putText(frame, "Time Remaining: {}".format(time_remaining), (50, 50), cv2.FONT_HERSHEY_COMPLEX, .8, (255, 50, 0), 2, lineType=cv2.LINE_AA)
-
-        return frame, time_remaining
-    
-    """
-    buildSkeleton(self, show = 1): build the skeleton of points (with the points and lines between them) and, for debugging, show 
+    getPoints(self, frame, dots=True, dotsVals=False): Return the points from OpenPose 
     input: 
         frame -> the video frame that we want the skeleton to go on top of
-        show -> debugging to show the skeleton only 
+        dots -> whether to output dots on each point
+        dotsVals -> whether to output values with each point
     output: 
         frame -> the modified frame with the score on it
+        points -> the OpenPose output points
     @TODO: 
     @NOTE: 
     @NOTE: 
     """
-    def buildSkeleton(self, frame, show = 0, lines = False):
-        _, points = self.getPoints(frame)
-
-        # Draw skeleton
-        for pair in self.POSE_PAIRS:
-            partA = pair[0]
-            partB = pair[1]
-
-            if points[partA] and points[partB]:
-                if lines:
-                    cv2.line(frame, points[partA], points[partB], (0, 255, 255), 2)
-                cv2.circle(frame, points[partA], 8, (0, 0, 255), thickness=-1, lineType=cv2.FILLED)
-        if show:
-            cv2.imshow('Output-Skeleton', frame)
-            cv2.waitKey(0)
-        return frame, points
-
     def getPoints(self, frame, dots=True, dotsVals=False):
         inWidth = 480
         inHeight = 480
@@ -163,9 +86,105 @@ class PoseEstimation():
             else:
                 points.append(None)
 
-        return frame, points    
+        return frame, points
+
+    """
+    buildSkeleton(self, frame, show = False, lines = False): build the skeleton of points (with the points and lines between them) and, for debugging, show 
+    input: 
+        frame -> the video frame that we want the skeleton to go on top of
+        show -> debugging to show the skeleton only 
+    output: 
+        frame -> the modified frame with the score on it
+        points -> the OpenPose output points
+    @TODO: 
+    @NOTE: 
+    @NOTE: 
+    """
+    def buildSkeleton(self, frame, show = False, lines = False):
+        _, points = self.getPoints(frame)
+
+        # Draw skeleton
+        for pair in self.POSE_PAIRS:
+            partA = pair[0]
+            partB = pair[1]
+
+            if points[partA] and points[partB]:
+                if lines:
+                    cv2.line(frame, points[partA], points[partB], (0, 255, 255), 2)
+                cv2.circle(frame, points[partA], 8, (0, 0, 255), thickness=-1, lineType=cv2.FILLED)
+        if show:
+            cv2.imshow('Output-Skeleton', frame)
+            cv2.waitKey(0)
+        return frame, points
+
+    """
+    showContours(self, frame, show = False): Make the contours 
+    input: 
+        frame -> the video frame that we want the skeleton to go on top of
+        show -> debugging to show the skeleton only 
+    output: 
+        frame -> the modified frame with the score on it
+        points -> the OpenPose output points
+    @TODO: create contour logic 
+    """
+    def showContours(self, frame, show = False):
+        _, points = self.getPoints(frame)
+
+        for pair in self.POSE_PAIRS:
+            partA = pair[0]
+            partB = pair[1]
+
+            if points[partA] and points[partB]:
+                cv2.line(img, points[partA], points[partB], (255, 255, 255), thickness=90, lineType=cv2.FILLED)
+        
+        if(show):
+            cv2.imshow('Output-Contour', img)
+            cv2.waitKey(0) 
+        cv2.imwrite('Output-Contour.jpg', img)
+
+        return frame, points
     
+    """
+    scoreTally(self, points, contour): tally the points that a user gets in a specific turn 
+    input: 
+        points -> the points that openPose returns
+        contour -> the contour used for the specific case 
+    output: 
+        score -> the score for the inputted points + contour combination
+    @TODO: implement scoring tally
+    """
+    def scoreTally(self, points, contour):
+        return 0
+
+    """
+    showScore(self, frame): show the score
+    input: 
+        frame -> the video frame that we want the score to go on top of
+    output: 
+        frame -> the modified frame with the score on it
+    @TODO: 
+    @NOTE: 
+    @NOTE: 
+    """
+    def showScore(self, frame):
+        cv2.putText(frame, "Score: {}".format(self.score), (500, 50), cv2.FONT_HERSHEY_COMPLEX, .8, (255, 50, 0), 2, lineType=cv2.LINE_AA)
+        return frame
     
+    """
+    showTime(self, frame, start_time): show the time remaining  
+    input: 
+        frame -> the video frame that we want the score to go on top of
+    output: 
+        frame -> the modified frame with the score on it
+    @TODO: implement timinig mechanism
+    @NOTE: already have some code written for it so I can get this done
+    @NOTE: also may be something that'll probably be overridden later 
+    """
+    def showTime(self, frame, start_time):
+        time_remaining = TIMER_THRESHOLD - int(time.perf_counter()-start_time)
+        cv2.putText(frame, "Time Remaining: {}".format(time_remaining), (50, 50), cv2.FONT_HERSHEY_COMPLEX, .8, (255, 50, 0), 2, lineType=cv2.LINE_AA)
+
+        return frame, time_remaining
     
     """
     startUI(self): the overall handler for the output to user  
@@ -196,7 +215,9 @@ class PoseEstimation():
                     if cv2.waitKey(1) == ord('q'):
                         return # actually want to go to the next one 
 
-
     def __del__(self):
+        """"
+        Destructor
+        """"
         self.cap.release()
         cv2.destroyAllWindows()

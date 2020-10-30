@@ -1,5 +1,6 @@
 # file to run the program
 from PoseEstimationImg import *
+from ContourDetection import *
 import cv2
 import time 
 import numpy as np
