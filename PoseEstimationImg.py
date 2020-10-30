@@ -2,11 +2,13 @@ import cv2
 import time
 import numpy as np
 
+TIMER_THRESHOLD = 3
+
 class PoseEstimation():
     def __init__(self, mode = "MPI", device = "cpu"):
-        """
-        Initialization function
-        """
+        """"
+        Constructor
+        """"
         self.mode = mode
         # Select model/specify paths
         if self.mode == "MPI":
@@ -31,80 +33,77 @@ class PoseEstimation():
             print("Using GPU device")
 
         self.cap = cv2.VideoCapture(0)
+        self.score = 0
+        # @NOTE would want voice + gesture objects here if possible 
+        # @NOTE else we can integrate into rest of code
 
-    def __readImg(self):
-        """
-        Read the camera input
-        """
-        # Read image
-        _, self.frame = self.cap.read() # Reading webcam
-        self.frameCopy = np.copy(self.frame)
-        self.frameWidth = self.frame.shape[1]
-        self.frameHeight = self.frame.shape[0]
-
-        t = time.time()
-        # Input image dimensions for the network
-        inWidth = 368
-        inHeight = 368
-        # Prepare frame to be fed to network
-        inpBlob = cv2.dnn.blobFromImage(self.frame, 1.0 / 255, (inWidth, inHeight), (0, 0, 0), swapRB=False, crop=False)
-        # Set prepared object as input blob of network
-        self.net.setInput(inpBlob)
-
-        self.output = self.net.forward()
-        print("Time taken by network : {:.3f}".format(time.time() - t))
-
-        self.H = self.output.shape[2]
-        self.W = self.output.shape[3]
+    """
+    showContours(self, frame): make the contours 
+    input: 
+        frame -> the video frame that we want the contour to go on top of
+    output: 
+        frame -> a modified frame with a contour on it
+    @TODO: create contour logic 
+    """
+    def showContours(self, frame):
+        
+        return frame
     
-    def getPoints(self):
-        """
-        Returns array of points 
-        """
-        self.__readImg()
+    """
+    scoreTally(self, points, contour): tally the points that a user gets in a specific turn 
+    input: 
+        points -> the points that openPose returns
+        contour -> the contour used for the specific case 
+    output: 
+        score -> the score for the inputted points + contour combination
+    @TODO: implement scoring tally
+    """
+    def scoreTally(self, points, contour):
+        return 0
 
-        points = []
+    """
+    showScore(self, frame): show the score
+    input: 
+        frame -> the video frame that we want the score to go on top of
+    output: 
+        frame -> the modified frame with the score on it
+    @TODO: 
+    @NOTE: 
+    @NOTE: 
+    """
+    def showScore(self, frame):
+        cv2.putText(frame, "Score: {}".format(self.score), (500, 50), cv2.FONT_HERSHEY_COMPLEX, .8, (255, 50, 0), 2, lineType=cv2.LINE_AA)
+        return frame
+    
+    """
+    showTime(self, frame): show the time remaining  
+    input: 
+        frame -> the video frame that we want the score to go on top of
+    output: 
+        frame -> the modified frame with the score on it
+    @TODO: implement timinig mechanism
+    @NOTE: already have some code written for it so I can get this done
+    @NOTE: also may be something that'll probably be overridden later 
+    """
+    def showTime(self, frame, start_time):
+        time_remaining = TIMER_THRESHOLD - int(time.perf_counter()-start_time)
+        cv2.putText(frame, "Time Remaining: {}".format(time_remaining), (50, 50), cv2.FONT_HERSHEY_COMPLEX, .8, (255, 50, 0), 2, lineType=cv2.LINE_AA)
 
-        # Plot points on image
-        for i in range(self.nPoints):
-            # Confidence map of corresponding body's part
-            probMap = self.output[0, i, :, :]
-
-            # Find global maxima of the probMap
-            minVal, prob, minLoc, point = cv2.minMaxLoc(probMap)
-            
-            # Scale the point to fit on the original image
-            x = (self.frameWidth * point[0]) / self.W
-            y = (self.frameHeight * point[1]) / self.H
-
-            threshold = 0.1
-
-            if prob > threshold:
-                cv2.circle(self.frameCopy, (int(x), int(y)), 8, (0, 255, 255), thickness=-1, lineType=cv2.FILLED)
-                cv2.putText(self.frameCopy, "{}".format(i), (int(x), int(y)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, lineType=cv2.LINE_AA)
-
-                # Add the point to the list if the probability is greater than the threshold
-                points.append((int(x), int(y)))
-            else:
-                points.append(None)
-
-        return points
-
-    def printPoints(self):
-        """
-        Outputs OpenPose points to image file
-        """
-        print(self.getPoints())
-        cv2.imshow('Output-Points', self.frameCopy)
-        cv2.waitKey(0)
-        cv2.imwrite('Output-Points.jpg', self.frameCopy)
-
-    def printSkeleton(self, show = 1):
-        """
-        Outputs OpenPose skeleton to image file
-        """
-        points = self.getPoints()
-        #print(points)
+        return frame, time_remaining
+    
+    """
+    buildSkeleton(self, show = 1): build the skeleton of points (with the points and lines between them) and, for debugging, show 
+    input: 
+        frame -> the video frame that we want the skeleton to go on top of
+        show -> debugging to show the skeleton only 
+    output: 
+        frame -> the modified frame with the score on it
+    @TODO: 
+    @NOTE: 
+    @NOTE: 
+    """
+    def buildSkeleton(self, frame, show = 0, lines = False):
+        _, points = self.getPoints(frame)
 
         # Draw skeleton
         for pair in self.POSE_PAIRS:
@@ -112,65 +111,97 @@ class PoseEstimation():
             partB = pair[1]
 
             if points[partA] and points[partB]:
-                cv2.line(self.frame, points[partA], points[partB], (0, 255, 255), 2)
-                cv2.circle(self.frame, points[partA], 8, (0, 0, 255), thickness=-1, lineType=cv2.FILLED)
+                if lines:
+                    cv2.line(frame, points[partA], points[partB], (0, 255, 255), 2)
+                cv2.circle(frame, points[partA], 8, (0, 0, 255), thickness=-1, lineType=cv2.FILLED)
         if show:
-            cv2.imshow('Output-Skeleton', self.frame)
+            cv2.imshow('Output-Skeleton', frame)
             cv2.waitKey(0)
-            cv2.imwrite('Output-Skeleton.jpg', self.frame)
-        
-    def printContour(self):
-        """
-        Outputs OpenPose contour
-        """
-        points = self.getPoints()
-        print(points)
+        return frame, points
 
-        img = np.zeros((self.frameHeight,self.frameWidth,3))
+    """
+    buildSkeleton(self, show = 1): Return the points from 
+    input: 
+        frame -> the video frame that we want the skeleton to go on top of
+        dots -> whether to output dots on each point
+        dotsVals -> whether to output values with each point
+    output: 
+        frame -> the modified frame with the score on it
+        points -> the OpenPose output points
+    @TODO: 
+    @NOTE: 
+    @NOTE: 
+    """
+    def getPoints(self, frame, dots=True, dotsVals=False):
+        inWidth = 480
+        inHeight = 480
+        inpBlob = cv2.dnn.blobFromImage(frame, 1.0 / 255, (inWidth, inHeight), (0, 0, 0), swapRB=False, crop=False)
+        self.net.setInput(inpBlob)
+        output = self.net.forward()
+        points = []
 
-        # Draw contour
-        for pair in self.POSE_PAIRS:
-            partA = pair[0]
-            partB = pair[1]
+        # Plot points on image
+        for i in range(self.nPoints):
+            # Confidence map of corresponding body's part
+            probMap = output[0, i, :, :]
 
-            if points[partA] and points[partB]:
-                cv2.line(img, points[partA], points[partB], (255, 255, 255), thickness=75, lineType=cv2.FILLED)
+            # Find global maxima of the probMap
+            minVal, prob, minLoc, point = cv2.minMaxLoc(probMap)
             
-        cv2.imshow('Output-Contour', img)
-        cv2.waitKey(0) 
-        cv2.imwrite('Output-Contour.jpg', img)
-    
-    def getVideo():
-        """
-        Returns the video capture
-        """
-        return self.cap
+            # Scale the point to fit on the original image
+            x = (frame.shape[1] * point[0]) / output.shape[3]
+            y = (frame.shape[0] * point[1]) / output.shape[2]
 
-    def testScoring(self):
-        """
-        Function to test scoring
-        """
-        #cap = cv2.VideoCapture(0)
-        cap = getVideo()
-        w = 640 #cap.get(cv2.CAP_PROP_FRAME_WIDTH)
-        h = 480 #cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
-        print(w,h)
+            threshold = 0.1
+
+            if prob > threshold:
+                if dots:
+                    cv2.circle(frame, (int(x), int(y)), 8, (0, 255, 255), thickness=-1, lineType=cv2.FILLED)
+                    if dotsVals:
+                        put = "{}:({}, {})".format(i,int(x),int(y))
+                    else:
+                        put = "{}".format(i)
+                    cv2.putText(frame, put, (int(x), int(y)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, lineType=cv2.LINE_AA)
+
+                # Add the point to the list if the probability is greater than the threshold
+                points.append((int(x), int(y)))
+            else:
+                points.append(None)
+
+        return frame, points    
+    
+    """
+    startUI(self): the overall handler for the output to user  
+    input: 
+        NONE
+    output: 
+        NONE
+    @TODO: create overall skeleton of function @NOTE DONE 
+    @TODO: figure out how to add contours (DONE), voice/speech, gesture into it
+    @TODO: shown below: want to have a UI change while the score is being tallied 
+    @TODO: go to the "next level"
+    @NOTE: consider cv2.waitKey(0) 
+    """
+    def startUI(self):
+        start_time = time.perf_counter()
         while True:
-            #_, frame = cap.read()
-            #self.printSkeleton(show=0)
-            # start geeksforgeeks https://www.geeksforgeeks.org/python-opencv-cv2-circle-method/
-            center_coordinates = (int(w/2), int(h/2)) 
-            radius = 100
-            color = (255,0,0)
-            thickness = 2
-            self.frame = cv2.circle(self.frame, center_coordinates, radius, color, thickness)
-            cv2.imshow('Output-Points', self.frame)
-            if cv2.waitKey(1) == ord('q'):
+            _, frame = self.cap.read()
+            frame = self.showContours(frame)
+            frame = self.showScore(frame)
+            frame, time_remaining = self.showTime(frame, start_time)
+            cv2.imshow('Hole in the Wall!', frame)
+            if cv2.waitKey(1) == ord('q'): 
                 break
+            if time_remaining <= 0: # @TODO
+                frame, points = self.buildSkeleton(frame)
+                while True:
+                    cv2.imshow('Hole in the Wall!', frame)
+                    if cv2.waitKey(1) == ord('q'):
+                        return # actually want to go to the next one 
 
     def __del__(self):
-        """
-        Deconstructor method
-        """
-        #self.cap.release()
+        """"
+        Destructor
+        """"
+        self.cap.release()
         cv2.destroyAllWindows()
