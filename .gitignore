@@ -3,7 +3,6 @@
 *.npy
 *.jpg
 *.jpeg
+*.mp4
 *.caffemodel
 __pycache__
-*.jpg
-*.mp4
