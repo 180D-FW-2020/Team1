@@ -5,3 +5,5 @@
 *.jpeg
 *.caffemodel
 __pycache__
+*.jpg
+*.mp4
