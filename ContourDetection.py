@@ -8,12 +8,19 @@ class ContourDetection():
         Initialize function
         """
         pass
-        
+    
+    """
+    isWithinContour(self, points, contourfile): Output 
+    input: 
+        points -> OpenPose output array of points
+        contourfile -> OpenPose output of contour from file
+    output: 
+        isWithin -> Boolean whether or not points are within contour
+    @TODO: 
+    @NOTE: 
+    @NOTE: 
+    """
     def isWithinContour(self, points, contourfile):
-        """
-        Returns True if OpenPose output points are within given contour 
-            from file
-        """
         img = cv2.imread(contourfile, cv2.IMREAD_GRAYSCALE)
         for i in range(len(points)):
             if points[i] != None:

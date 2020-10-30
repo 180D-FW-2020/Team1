@@ -46,7 +46,6 @@ class PoseEstimation():
     @TODO: create contour logic 
     """
     def showContours(self, frame):
-        
         return frame
     
     """
@@ -120,7 +119,7 @@ class PoseEstimation():
         return frame, points
 
     """
-    buildSkeleton(self, show = 1): Return the points from 
+    getPoints(self, frame, dots=True, dotsVals=False): Return the points from OpenPose 
     input: 
         frame -> the video frame that we want the skeleton to go on top of
         dots -> whether to output dots on each point
@@ -168,7 +167,7 @@ class PoseEstimation():
             else:
                 points.append(None)
 
-        return frame, points    
+        return frame, points
     
     """
     startUI(self): the overall handler for the output to user  
