@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+#requires pyAudio and Speech Recognition conda venv.
+
 import speech_recognition as sr
 
 # obtain audio from the microphone
@@ -8,24 +10,18 @@ with sr.Microphone() as source:
     print("Say something!")
 
     while True:
-        audio = 0
-        try:
-            audio = r.listen(source,1.5)
-        except sr.WaitTimeoutError:
-            print("No new words")
+        audio = r.listen(source)
 
         # recognize speech using Google Speech Recognition
         output_string = ""
         try:
             output_string =  r.recognize_google(audio)
             print("Google Speech Recognition thinks you said " + output_string)
-        except sr.UnknownValueError:
-            print("Google Speech Recognition could not understand audio")
-        except sr.RequestError as e:
-            print("Could not request results from Google Speech Recognition service; {0}".format(e))
-        except:
-            print("no audio")
 
+            keyword = "activate"
+            if (keyword.lower() in output_string.lower()):
+                print("CALLBACK WE STARTED A POWERUP") #this will need to be fine tuned later
 
-        if (output_string=="hello"):
-            print("CALLBACK WE STARTED A POWERUP") #this will need to be fine tuned later
+            
+        except Exception as e:
+            print("please try again")
