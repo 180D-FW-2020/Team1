@@ -97,6 +97,7 @@ class PoseEstimation():
         show -> debugging to show the skeleton only 
     output: 
         frame -> the modified frame with the score on it
+        points -> the OpenPose output points
     @TODO: 
     @NOTE: 
     @NOTE: 
