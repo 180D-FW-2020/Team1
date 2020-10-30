@@ -5,7 +5,7 @@ import numpy as np
 class PoseEstimation():
     def __init__(self, mode = "MPI", device = "cpu"):
         """
-        
+        Initialization function
         """
         self.mode = mode
         # Select model/specify paths
@@ -34,7 +34,7 @@ class PoseEstimation():
 
     def __readImg(self):
         """
-        
+        Read the camera input
         """
         # Read image
         _, self.frame = self.cap.read() # Reading webcam
@@ -59,7 +59,7 @@ class PoseEstimation():
     
     def getPoints(self):
         """
-        
+        Returns array of points 
         """
         self.__readImg()
 
@@ -92,7 +92,7 @@ class PoseEstimation():
 
     def printPoints(self):
         """
-        
+        Outputs OpenPose points to image file
         """
         print(self.getPoints())
         cv2.imshow('Output-Points', self.frameCopy)
@@ -101,7 +101,7 @@ class PoseEstimation():
 
     def printSkeleton(self, show = 1):
         """
-        
+        Outputs OpenPose skeleton to image file
         """
         points = self.getPoints()
         #print(points)
@@ -121,7 +121,7 @@ class PoseEstimation():
         
     def printContour(self):
         """
-
+        Outputs OpenPose contour
         """
         points = self.getPoints()
         print(points)
@@ -134,7 +134,7 @@ class PoseEstimation():
             partB = pair[1]
 
             if points[partA] and points[partB]:
-                cv2.line(img, points[partA], points[partB], (255, 255, 255), thickness=90, lineType=cv2.FILLED)
+                cv2.line(img, points[partA], points[partB], (255, 255, 255), thickness=75, lineType=cv2.FILLED)
             
         cv2.imshow('Output-Contour', img)
         cv2.waitKey(0) 
@@ -142,13 +142,13 @@ class PoseEstimation():
     
     def getVideo():
         """
-        
+        Returns the video capture
         """
         return self.cap
 
     def testScoring(self):
         """
-        
+        Function to test scoring
         """
         #cap = cv2.VideoCapture(0)
         cap = getVideo()
@@ -169,5 +169,8 @@ class PoseEstimation():
                 break
 
     def __del__(self):
+        """
+        Deconstructor method
+        """
         #self.cap.release()
         cv2.destroyAllWindows()
