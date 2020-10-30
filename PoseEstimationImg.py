@@ -41,7 +41,8 @@ class PoseEstimation():
 
         self.cap = cv2.VideoCapture(0)
         self.score = 0
-   
+        # @NOTE would want voice + gesture objects here if possible 
+        # @NOTE else we can integrate into rest of code 
     """
     showContours(self, frame): make the contours 
     input: 
