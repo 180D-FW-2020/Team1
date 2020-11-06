@@ -6,9 +6,9 @@ TIMER_THRESHOLD = 3
 
 class PoseEstimation():
     def __init__(self, mode = "MPI", device = "cpu"):
-        """"
+        """
         Constructor
-        """"
+        """
         self.mode = mode
         # Select model/specify paths
         if self.mode == "MPI":
@@ -38,6 +38,22 @@ class PoseEstimation():
         # @NOTE else we can integrate into rest of code
 
     """
+    getFrame(self): 
+    input: 
+    output: 
+        frame -> the raw camera feed frame
+    @TODO: 
+    @NOTE: 
+    @NOTE: 
+    """
+    def getFrame(self):
+        """
+        Read the camera input
+        """
+        _, frame = self.cap.read() # Reading webcam
+        return frame
+        
+    """
     getPoints(self, frame, dots=True, dotsVals=False): Return the points from OpenPose 
     input: 
         frame -> the video frame that we want the skeleton to go on top of
@@ -50,8 +66,8 @@ class PoseEstimation():
     @NOTE: 
     @NOTE: 
     """
-    def getPoints(self, frame, dots=True, dotsVals=False):
-        inWidth = 480
+    def getPoints(self, frame, show=False, dots=True, dotsVals=False):
+        inWidth = 640
         inHeight = 480
         inpBlob = cv2.dnn.blobFromImage(frame, 1.0 / 255, (inWidth, inHeight), (0, 0, 0), swapRB=False, crop=False)
         self.net.setInput(inpBlob)
@@ -86,10 +102,13 @@ class PoseEstimation():
             else:
                 points.append(None)
 
+        if show:
+            cv2.imshow('Output-Points', frame)
+            cv2.waitKey(0)
         return frame, points
 
     """
-    buildSkeleton(self, frame, show = False, lines = False): build the skeleton of points (with the points and lines between them) and, for debugging, show 
+    getSkeleton(self, frame, show = False, lines = False): build the skeleton of points (with the points and lines between them) and, for debugging, show 
     input: 
         frame -> the video frame that we want the skeleton to go on top of
         show -> debugging to show the skeleton only 
@@ -100,7 +119,7 @@ class PoseEstimation():
     @NOTE: 
     @NOTE: 
     """
-    def buildSkeleton(self, frame, show = False, lines = False):
+    def getSkeleton(self, frame, show = False, lines = False):
         _, points = self.getPoints(frame)
 
         # Draw skeleton
@@ -118,7 +137,7 @@ class PoseEstimation():
         return frame, points
 
     """
-    showContours(self, frame, show = False): Make the contours 
+    getContour(self, frame, show = False): Make the contour using OpenPose
     input: 
         frame -> the video frame that we want the skeleton to go on top of
         show -> debugging to show the skeleton only 
@@ -127,17 +146,19 @@ class PoseEstimation():
         points -> the OpenPose output points
     @TODO: create contour logic 
     """
-    def showContours(self, frame, show = False):
+    def getContour(self, frame, show = False):
         _, points = self.getPoints(frame)
+
+        img = np.zeros((480,640))
 
         for pair in self.POSE_PAIRS:
             partA = pair[0]
             partB = pair[1]
 
             if points[partA] and points[partB]:
-                cv2.line(img, points[partA], points[partB], (255, 255, 255), thickness=90, lineType=cv2.FILLED)
+                cv2.line(img, points[partA], points[partB], (255, 255, 255), thickness=75, lineType=cv2.FILLED)
         
-        if(show):
+        if show:
             cv2.imshow('Output-Contour', img)
             cv2.waitKey(0) 
         cv2.imwrite('Output-Contour.jpg', img)
@@ -216,8 +237,8 @@ class PoseEstimation():
                         return # actually want to go to the next one 
 
     def __del__(self):
-        """"
+        """
         Destructor
-        """"
+        """
         self.cap.release()
         cv2.destroyAllWindows()
