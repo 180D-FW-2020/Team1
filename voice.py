@@ -32,7 +32,6 @@ class commandRecognizer:
                     #check if the keyword is present in any of the speech
                     for key in self.command_dictionary:
                         if (key.lower() in output_string.lower()):
-                            print("CALLBACK WE STARTED A POWERUP") 
                             self.command_dictionary[key]()
 
                 except Exception as e:
@@ -43,9 +42,9 @@ class commandRecognizer:
 
 #example callbacks for commands/pause/any functionality we need
 def ex1():
-    print("first one called")
+    print("activate command called")
 def ex2():
-    print("second one called")
+    print("help command called")
 
 #Example keywords being linked to the callbacks
 keywords_example = {
