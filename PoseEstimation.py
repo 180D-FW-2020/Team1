@@ -156,7 +156,7 @@ class PoseEstimation():
             partB = pair[1]
 
             if points[partA] and points[partB]:
-                cv2.line(img, points[partA], points[partB], (255, 255, 255), thickness=75, lineType=cv2.FILLED)
+                cv2.line(img, points[partA], points[partB], (255, 255, 255), thickness=80, lineType=cv2.FILLED)
         
         if show:
             cv2.imshow('Output-Contour', img)
