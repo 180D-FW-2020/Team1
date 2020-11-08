@@ -159,15 +159,8 @@ if(IMU.BerryIMUversion == 99):
 IMU.initIMU()       #Initialise the accelerometer, gyroscope and compass
 
 i = 0
-header = ["time_ms", "delta_ms"]
-for sensor in ["accel_ms2", "mag_uT", "gyro_degs", "euler_deg", "quaternion", "lin_accel_ms2", "gravity_ms2"]:
-    if sensor is "quaternion":
-        header.append(sensor + "_w")
-    header.append(sensor + "_x")
-    header.append(sensor + "_y")
-    header.append(sensor + "_z")
+header = ["time_ms", "delta_ms"] + utils.get_sensor_headers()
 
-# TODO: Use python fire =p
 filename = input("Name the folder where data will be stored: ")
 if not os.path.exists(filename):
     os.mkdir(filename + '/')
@@ -175,8 +168,6 @@ starting_index = int(input("What number should we start on? "))
 
 duration_s = float(input("Please input how long should a sensor trace be in seconds (floats OK): "))
 
-# TODO: Add option to delete just recorded trace if it's bad
-# TODO: Add option to save notes per recorded trace 
 i = starting_index
 
 while True:
