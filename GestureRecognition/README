@@ -14,15 +14,8 @@ BerryIMUv1 uses LSM9DS0 IMU
 BerryIMUv2 uses LSM9DS1 IMU
 BerryIMUv3 uses LSM6DSL and LIS3MDL
 
+---------------------------------------------------------------------
 
-Python2 and Python3 supported by this script
+Machine Learning based off of Magic Wand project by Jennifer Wang 
 
-Python2;
-Run using;
-python berryIMU.py
-python calibrateBerryIMU.py
-
-Python3;
-Run using;
-python3 berryIMU.py
-python3 calibrateBerryIMU.py
+https://github.com/jewang/gesture-demo
