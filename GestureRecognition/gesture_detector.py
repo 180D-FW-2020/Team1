@@ -11,7 +11,7 @@ import joblib
 import subprocess
 import shlex
 
-model = joblib.load('/home/pi/test/models/75pt_model.joblib')
+model = joblib.load('/home/pi/Team1/GestureRecognition/models/75pt_model.joblib')
 
 SAMPLE_RATE_HZ = 100
 QUATERNION_SCALE = (1.0 / (1 << 14))
@@ -193,7 +193,7 @@ while True:
         prediction = model.predict([features])[0]
 
         #print(int(elapsed_ms), prediction)
-        if prediction != 'negative_trim':# and last_classification != prediction:
+        if prediction != 'negative_trim' and last_classification != prediction: 
             print("========================>", prediction)
         
         data.clear()
