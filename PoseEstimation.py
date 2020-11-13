@@ -2,8 +2,6 @@ import cv2
 import time
 import numpy as np
 
-TIMER_THRESHOLD = 10
-
 class PoseEstimation():
     def __init__(self, mode = "MPI", device = "cpu"):
         """
