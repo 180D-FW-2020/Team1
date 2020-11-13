@@ -8,7 +8,5 @@ pose = PoseEstimation()
 detect = ContourDetection()
 
 frame = pose.getFrame()
-#pose.getContour(frame, True)
-_, points = pose.getPoints(frame, True)
 
-print(detect.isWithinContour(points, 'Output-Contour.jpg'))
+pose.getSkeleton(frame, True, True)

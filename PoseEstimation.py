@@ -81,10 +81,12 @@ class PoseEstimation():
                 points.append((int(x), int(y)))
             else:
                 points.append(None)
-
+        
         if show:
             cv2.imshow('Output-Points', frame)
             cv2.waitKey(0)
+            cv2.imwrite('Output-Points.jpg', frame)
+        
         return frame, points
 
     """
@@ -114,6 +116,7 @@ class PoseEstimation():
         if show:
             cv2.imshow('Output-Skeleton', frame)
             cv2.waitKey(0)
+            cv2.imwrite('Output-Skeleton.jpg', frame)
         return frame, points
 
     """
