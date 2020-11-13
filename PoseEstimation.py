@@ -2,7 +2,7 @@ import cv2
 import time
 import numpy as np
 
-TIMER_THRESHOLD = 3
+TIMER_THRESHOLD = 10
 
 class PoseEstimation():
     def __init__(self, mode = "MPI", device = "cpu"):
@@ -32,27 +32,7 @@ class PoseEstimation():
             self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
             print("Using GPU device")
 
-        self.cap = cv2.VideoCapture(0)
-        self.score = 0
-        # @NOTE would want voice + gesture objects here if possible 
-        # @NOTE else we can integrate into rest of code
 
-    """
-    getFrame(self): 
-    input: 
-    output: 
-        frame -> the raw camera feed frame
-    @TODO: 
-    @NOTE: 
-    @NOTE: 
-    """
-    def getFrame(self):
-        """
-        Read the camera input
-        """
-        _, frame = self.cap.read() # Reading webcam
-        return frame
-        
     """
     getPoints(self, frame, dots=True, dotsVals=False): Return the points from OpenPose 
     input: 
@@ -137,7 +117,7 @@ class PoseEstimation():
         return frame, points
 
     """
-    getContour(self, frame, show = False): Make the contour using OpenPose
+    getContour(self, frame, show = False): Make the contour
     input: 
         frame -> the video frame that we want the skeleton to go on top of
         show -> debugging to show the skeleton only 
@@ -164,81 +144,10 @@ class PoseEstimation():
         cv2.imwrite('Output-Contour.jpg', img)
 
         return frame, points
-    
-    """
-    scoreTally(self, points, contour): tally the points that a user gets in a specific turn 
-    input: 
-        points -> the points that openPose returns
-        contour -> the contour used for the specific case 
-    output: 
-        score -> the score for the inputted points + contour combination
-    @TODO: implement scoring tally
-    """
-    def scoreTally(self, points, contour):
-        return 0
 
-    """
-    showScore(self, frame): show the score
-    input: 
-        frame -> the video frame that we want the score to go on top of
-    output: 
-        frame -> the modified frame with the score on it
-    @TODO: 
-    @NOTE: 
-    @NOTE: 
-    """
-    def showScore(self, frame):
-        cv2.putText(frame, "Score: {}".format(self.score), (500, 50), cv2.FONT_HERSHEY_COMPLEX, .8, (255, 50, 0), 2, lineType=cv2.LINE_AA)
-        return frame
-    
-    """
-    showTime(self, frame, start_time): show the time remaining  
-    input: 
-        frame -> the video frame that we want the score to go on top of
-    output: 
-        frame -> the modified frame with the score on it
-    @TODO: implement timinig mechanism
-    @NOTE: already have some code written for it so I can get this done
-    @NOTE: also may be something that'll probably be overridden later 
-    """
-    def showTime(self, frame, start_time):
-        time_remaining = TIMER_THRESHOLD - int(time.perf_counter()-start_time)
-        cv2.putText(frame, "Time Remaining: {}".format(time_remaining), (50, 50), cv2.FONT_HERSHEY_COMPLEX, .8, (255, 50, 0), 2, lineType=cv2.LINE_AA)
-
-        return frame, time_remaining
-    
-    """
-    startUI(self): the overall handler for the output to user  
-    input: 
-        NONE
-    output: 
-        NONE
-    @TODO: create overall skeleton of function @NOTE DONE 
-    @TODO: figure out how to add contours (DONE), voice/speech, gesture into it
-    @TODO: shown below: want to have a UI change while the score is being tallied 
-    @TODO: go to the "next level"
-    @NOTE: consider cv2.waitKey(0) 
-    """
-    def startUI(self):
-        start_time = time.perf_counter()
-        while True:
-            _, frame = self.cap.read()
-            frame = self.showContours(frame)
-            frame = self.showScore(frame)
-            frame, time_remaining = self.showTime(frame, start_time)
-            cv2.imshow('Hole in the Wall!', frame)
-            if cv2.waitKey(1) == ord('q'): 
-                break
-            if time_remaining <= 0: # @TODO
-                frame, points = self.buildSkeleton(frame)
-                while True:
-                    cv2.imshow('Hole in the Wall!', frame)
-                    if cv2.waitKey(1) == ord('q'):
-                        return # actually want to go to the next one 
 
     def __del__(self):
         """
         Destructor
         """
-        self.cap.release()
         cv2.destroyAllWindows()
