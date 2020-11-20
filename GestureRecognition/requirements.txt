@@ -1,0 +1,5 @@
+smbus2==0.3.0
+pandas==0.23.3
+numpy==1.14.0
+joblib==0.17.0
+scikit_learn==0.23.2

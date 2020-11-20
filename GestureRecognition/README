@@ -19,3 +19,6 @@ BerryIMUv3 uses LSM6DSL and LIS3MDL
 Machine Learning based off of Magic Wand project by Jennifer Wang 
 
 https://github.com/jewang/gesture-demo
+
+To install dependencies: 
+pip -r requirements.txt
