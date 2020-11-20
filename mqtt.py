@@ -1,5 +1,5 @@
 import paho.mqtt.client as mqtt
-import numpy as np
+import json
 connection_string = "ece180d/team1"
 
 # 0. define callbacks - functions that run when events happen.
@@ -42,7 +42,13 @@ client.connect_async('mqtt.eclipse.org')
 client.loop_start()
 # client.loop_forever()
 
-client.publish(connection_string, float(np.random.random(1)), qos=1)
+#Example method for sending a gesture
+packet = {
+  "username": "Chester",
+  "score": 30,
+  "gesture": "NA"
+}
+client.publish(connection_string, json.dumps(packet), qos=1)
 while True:
     pass
 
