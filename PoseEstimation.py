@@ -84,7 +84,6 @@ class PoseEstimation():
             cv2.imshow('Output-Points', frame)
             cv2.waitKey(0)
             cv2.imwrite('Output-Points.jpg', frame)
-        
         return frame, points
 
     """
