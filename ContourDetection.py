@@ -12,22 +12,21 @@ class ContourDetection():
     """
     isWithinContour(self, points, contourfile): Output 
     input: 
-        points -> OpenPose output array of points
-        contourfile -> OpenPose output of contour from file
+        points -> Python list of points
+        contour -> contour from file system
     output: 
-        isWithin -> Boolean whether or not points are within contour
-    @TODO: 
-    @NOTE: 
+        isWithin -> scaled count of # of points in boundaries
+    @TODO: need to work on scaling function, should't take too long 
+    @NOTE: accuracy is still around 50%. Need it to increase to about 80+%.
     @NOTE: 
     """
-    def isWithinContour(self, points, contourfile):
-        img = cv2.imread(contourfile, cv2.COLOR_BGR2GRAY)
+    def isWithinContour(self, points, contour):
+        count = 0 
         print(points)
         for point in points:
-            if point == None:
+            if point == None or point[0] > 480 or point[1] > 640:
                 continue
-                if img[point[0],point[1]] == 255:
-                    print("False")
-                    return False
-        print("True")
-        return True
+                # cv2.circle(output, (point[0],point[1]), 8, (0, 255, 255), thickness=-1, lineType=cv2.FILLED)
+            if contour[point[0],point[1],0] > 65 and contour[point[0],point[1],1] > 65 and contour[point[0],point[1],2] > 65:
+                count +=1
+        return count
