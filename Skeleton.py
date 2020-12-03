@@ -155,6 +155,7 @@ class Skeleton():
         frame = np.zeros(shape=[480, 640, 3], dtype=np.uint8)
         self.show_screen('level')
         start_time = time.perf_counter()
+        print(start_time)
         override_time=False
         stop = False
         while True:
@@ -171,9 +172,15 @@ class Skeleton():
             frame, time_remaining, original = self.editFrame(frame, start_time, contour, override_time=override_time)
             cv2.imshow(WINDOWNAME, frame)
             if override_time == True and stop == False:
+                start_time+=1
                 stop = True
                 continue
             if time_remaining <= 0: 
+                frame, time_remaining, original = self.editFrame(frame, start_time, contour, override_time=override_time)
+                cv2.imshow(WINDOWNAME, frame)
+                while True:
+                    if cv2.waitKey(100):
+                        break
                 frame, points = self.PoseEstimator.getPoints(original)
                 level_score = self.PoseDetector.isWithinContour(points, contour)
                 if DEBUG:

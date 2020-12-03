@@ -24,7 +24,7 @@ class ContourDetection():
         count = 0 
         print(points)
         for point in points:
-            if point == None or point[0] > 480 or point[1] > 640:
+            if point == None or point[0] >= 480 or point[1] >= 640:
                 continue
                 # cv2.circle(output, (point[0],point[1]), 8, (0, 255, 255), thickness=-1, lineType=cv2.FILLED)
             if contour[point[0],point[1],0] > 65 and contour[point[0],point[1],1] > 65 and contour[point[0],point[1],2] > 65:
