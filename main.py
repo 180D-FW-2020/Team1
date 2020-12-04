@@ -42,32 +42,33 @@ for contour_file in contour_file_names:
 
 class Game():
     def __init__(self):
+        # Capturing Video
         self.cap = cv2.VideoCapture(0)
         self.width  = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+        # OpenPose
         self.PoseEstimator = PoseEstimation() # openPose implementation object
         self.PoseDetector = ContourDetection() # pose detector algorithm created \
+        
+        # Voice
         self.voice = commandRecognizer(command_dict)
-        self.user_score = 0
-        self.level_number = 0
-        self.uservid_weight = 1
-        self.mode = -1 # 0 for single player, 1 for multi player
         self.voice.listen()
 
-        #MQTT STUFF
+        # MQTT
         self.client = mqtt.Client()
         self.client.on_connect = on_connect
         self.client.on_disconnect = on_disconnect
         self.client.on_message = on_message
+        self.client.connect_async('mqtt.eclipse.org') # 2. connect to a broker using one of the connect*() functions.
+        self.client.loop_start() # 3. call one of the loop*() functions to maintain network traffic flow with the broker.
 
-
-        # 2. connect to a broker using one of the connect*() functions.
-        client.connect_async('mqtt.eclipse.org')
-        # client.connect("mqtt.eclipse.org")
-
-        # 3. call one of the loop*() functions to maintain network traffic flow with the broker.
-        client.loop_start()
-        # client.loop_forever()
+        # User variables
+        self.user_score = 0
+        self.level_number = 0
+        self.uservid_weight = 1
+        self.mode = -1 # 0 for single player, 1 for multi player
+        
 
     def show_screen(self, screen_type):
         frame = np.zeros(shape=[480, 640, 3], dtype=np.uint8)
