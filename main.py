@@ -260,11 +260,6 @@ class Game():
         self.client.loop_stop()
         self.client.disconnect()
 
-def testVision():
-    pose = PoseEstimation()
-    detect = ContourDetection()
-    frame = cv2.VideoCapture(0)
-    pose.getContour(frame, True, 'easy_tpose')
-
 if __name__ == '__main__':
-    testVision()
+    gameSkeleton = Game()
+    gameSkeleton.game()
