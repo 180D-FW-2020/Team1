@@ -10,5 +10,4 @@ See requirements.txt
 ```
 pip install pipreqs
 pip install -r requirements.txt
-python setup.py install 
 ```
