@@ -1,42 +1,43 @@
 #requires pyAudio and Speech Recognition conda venv.
 
 import speech_recognition as sr
+import time
+
 
 #Class to recognize commands. Listen/stop are used to control it being active.
 #dispatch should be called in any free time the program has (where actual listening is performed)
 class commandRecognizer:
     def __init__(self, command_dictionary):
         self.command_dictionary = command_dictionary
-        self.active = False
+        self.r = sr.Recognizer()
+        self.m = sr.Microphone()
+        with self.m as source:
+            self.r.adjust_for_ambient_noise(source)  # we only need to calibrate once, before we start listening
 
     def listen(self):
-        self.active = True
+        self.stop_listening = self.r.listen_in_background(self.m, self.rec, phrase_time_limit=1)
     
     def stop(self):
-        self.active = False
+        self.stop_listening(wait_for_stop=False)
 
-    def dispatch(self):
-        if self.active:
-            # obtain audio from the microphone
-            r = sr.Recognizer()
-            with sr.Microphone() as source:
-                print("Say something!")
+    def rec(self, recognizer, audio):
+        # received audio data, now we'll recognize it using Google Speech Recognition
+        try:
+            # for testing purposes, we're just using the default API key
+            # to use another API key, use `r.recognize_google(audio, key="GOOGLE_SPEECH_RECOGNITION_API_KEY")`
+            # instead of `r.recognize_google(audio)`
+            output_string=recognizer.recognize_google(audio)
+            print("Google Speech Recognition thinks you said " + recognizer.recognize_google(audio))
+            #check if the keyword is present in any of the speech
+            for key in self.command_dictionary:
+                if (key.lower() in output_string.lower()):
+                    self.command_dictionary[key]()
 
-                audio = r.listen_in_background(source)
+        except sr.UnknownValueError:
+            print("Google Speech Recognition could not understand audio")
+        except sr.RequestError as e:
+            print("Could not request results from Google Speech Recognition service; {0}".format(e))
 
-                # recognize speech using Google Speech Recognition
-                output_string = ""
-                try:
-                    output_string =  r.recognize_google(audio)
-                    print("Google Speech Recognition thinks you said " + output_string)
-
-                    #check if the keyword is present in any of the speech
-                    for key in self.command_dictionary:
-                        if (key.lower() in output_string.lower()):
-                            self.command_dictionary[key]()
-
-                except Exception as e:
-                    print("please try again")
 
 
 #example usecase
@@ -48,12 +49,14 @@ def ex2():
     print("help command called")
 
 #Example keywords being linked to the callbacks
-keywords_example = {
-    "activate" : ex1,
-    "help" : ex2
-}
+# keywords_example = {
+#     "activate" : ex1,
+#     "help" : ex2
+# }
 
-c = commandRecognizer(keywords_example)
-c.listen()
-while True:
-    c.dispatch()
+# c = commandRecognizer(keywords_example)
+# c.listen()
+
+# while True:
+#     print("waiting")
+#     time.sleep(0.2)

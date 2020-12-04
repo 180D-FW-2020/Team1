@@ -171,10 +171,8 @@ class Skeleton():
         print(start_time)
         override_time=False
         stop = False
+        self.voice.listen()
         while True:
-            print('before')
-            self.voice.dispatch()
-            print('hi')
             key = cv2.waitKey(1)
             if key == ESC_KEY:
                 self.__del__()
