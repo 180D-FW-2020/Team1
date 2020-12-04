@@ -254,16 +254,17 @@ class Game():
         while True:
             if cv2.waitKey(0):
                 break
-    def testVision(self):
-        pose = PoseEstimation()
-        detect = ContourDetection()
-        frame = pose.getFrame()
-        pose.getSkeleton(frame, True, True)       
+
     def __del__(self):
         cv2.destroyAllWindows()
         self.client.loop_stop()
         self.client.disconnect()
 
+def testVision():
+    pose = PoseEstimation()
+    detect = ContourDetection()
+    frame = cv2.VideoCapture(0)
+    pose.getContour(frame, True, 'easy_tpose')
+
 if __name__ == '__main__':
-    gameSkeleton = Game()
-    gameSkeleton.game()
+    testVision()

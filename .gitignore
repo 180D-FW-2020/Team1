@@ -6,6 +6,8 @@
 *.mp4
 *.caffemodel
 
+!graphics/
+
 __pycache__/
 *.py[cod]
 *$py.class

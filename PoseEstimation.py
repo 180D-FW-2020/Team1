@@ -126,7 +126,7 @@ class PoseEstimation():
         points -> the OpenPose output points
     @TODO: create contour logic 
     """
-    def getContour(self, frame, show = False):
+    def getContour(self, frame, show = False, output='Output-Contour.jpg'):
         _, points = self.getPoints(frame)
 
         img = np.zeros((480,640))
@@ -141,7 +141,7 @@ class PoseEstimation():
         if show:
             cv2.imshow('Output-Contour', img)
             cv2.waitKey(0) 
-        cv2.imwrite('Output-Contour.jpg', img)
+        cv2.imwrite(output, img)
 
         return frame, points
 
