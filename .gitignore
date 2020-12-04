@@ -2,6 +2,7 @@
 .vscode
 *.npy
 *.jpg
+!test_contour.jpg
 *.jpeg
 *.mp4
 *.caffemodel
