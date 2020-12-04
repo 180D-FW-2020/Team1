@@ -1,5 +1,6 @@
 import paho.mqtt.client as mqtt
 import json
+from GestureRecognition/gesture_detector import *
 connection_string = "ece180d/team1"
 
 # 0. define callbacks - functions that run when events happen.
@@ -37,6 +38,8 @@ client.on_message = on_message
 # 2. connect to a broker using one of the connect*() functions.
 client.connect_async('mqtt.eclipse.org')
 # client.connect("mqtt.eclipse.org")
+
+n = gestureRecognizer() 
     
 # 3. call one of the loop*() functions to maintain network traffic flow with the broker.
 client.loop_start()
@@ -46,7 +49,7 @@ client.loop_start()
 packet = {
   "username": "Chester",
   "score": 30,
-  "gesture": "NA"
+  "gesture": n.classify()
 }
 client.publish(connection_string, json.dumps(packet), qos=1)
 while True:

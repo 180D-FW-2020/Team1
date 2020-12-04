@@ -210,5 +210,5 @@ class gestureRecognizer:
 
 n = gestureRecognizer() 
 
-while True:
-    n.classify()
+# while True:
+#     n.classify()
