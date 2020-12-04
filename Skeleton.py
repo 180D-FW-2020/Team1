@@ -5,6 +5,7 @@ overall handler for the output to user
 """
 from PoseEstimation import *
 from ContourDetection import *
+from voice import *
 import cv2
 import time 
 import numpy as np
@@ -21,6 +22,16 @@ WINDOWNAME = 'Hole in the Wall!'
 cv2.namedWindow(WINDOWNAME, cv2.WND_PROP_FULLSCREEN)
 cv2.setWindowProperty(WINDOWNAME,cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
 
+def ex1():
+    print("activate command called")
+def ex2():
+    print("help command called")
+
+command_dict = {
+    "activate" : ex1,
+    "help" : ex2
+}
+
 contour_file_names = [r'.\test_contour.jpg']
 contour_pictures = []
 for contour_file in contour_file_names:
@@ -34,11 +45,13 @@ class Skeleton():
         self.width  = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         self.PoseEstimator = PoseEstimation() # openPose implementation object
-        self.PoseDetector = ContourDetection() # pose detector algorithm created 
+        self.PoseDetector = ContourDetection() # pose detector algorithm created \
+        self.voice = commandRecognizer(command_dict)
         self.user_score = 0
         self.level_number = 0
         self.uservid_weight = 1
         self.mode = -1 # 0 for single player, 1 for multi player
+        self.voice.listen()
 
     def show_screen(self, screen_type):
         frame = np.zeros(shape=[480, 640, 3], dtype=np.uint8)
@@ -159,6 +172,9 @@ class Skeleton():
         override_time=False
         stop = False
         while True:
+            print('before')
+            self.voice.dispatch()
+            print('hi')
             key = cv2.waitKey(1)
             if key == ESC_KEY:
                 self.__del__()

@@ -22,7 +22,8 @@ class commandRecognizer:
             with sr.Microphone() as source:
                 print("Say something!")
 
-                audio = r.listen(source)
+                audio = r.listen_in_background(source)
+
                 # recognize speech using Google Speech Recognition
                 output_string = ""
                 try:
