@@ -1,5 +1,5 @@
 """
-Skeleton.py: file to run the program
+game.py: file to run the program
 overall handler for the output to user
 @TODO: 
 """
@@ -12,7 +12,7 @@ import numpy as np
 import random
 
 
-DEBUG = 1
+DEBUG = 0
 
 TIMER_THRESHOLD = 10
 ZERO_KEY = 48
@@ -39,7 +39,7 @@ for contour_file in contour_file_names:
     img = cv2.bitwise_not(img)
     contour_pictures.append(img)
 
-class Skeleton():
+class Game():
     def __init__(self):
         self.cap = cv2.VideoCapture(0)
         self.width  = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -51,6 +51,7 @@ class Skeleton():
         self.level_number = 0
         self.uservid_weight = 1
         self.mode = -1 # 0 for single player, 1 for multi player
+        self.voice.listen()
 
     def show_screen(self, screen_type):
         frame = np.zeros(shape=[480, 640, 3], dtype=np.uint8)
@@ -143,7 +144,7 @@ class Skeleton():
         ######### stop powerup code 
         cv2.putText(frame, "Time Remaining: {}".format(time_remaining), (10, 50), cv2.FONT_HERSHEY_COMPLEX, .8, (255, 50, 0), 2, lineType=cv2.LINE_AA)
         cv2.putText(frame, "Score: {}".format(self.user_score), (500, 50), cv2.FONT_HERSHEY_COMPLEX, .8, (255, 50, 0), 2, lineType=cv2.LINE_AA)
-        print('time remaining', time_remaining)
+        # print('time remaining', time_remaining)
         return frame, time_remaining, original
 
     """
@@ -170,7 +171,6 @@ class Skeleton():
         print(start_time)
         override_time=False
         stop = False
-        self.voice.listen()
         while True:
             key = cv2.waitKey(1)
             if key == ESC_KEY:
@@ -245,5 +245,7 @@ class Skeleton():
         pose.getSkeleton(frame, True, True)       
     def __del__(self):
         cv2.destroyAllWindows()
-gameSkeleton = Skeleton()
-gameSkeleton.game()
+
+if __name__ == '__main__':
+    gameSkeleton = Game()
+    gameSkeleton.game()
