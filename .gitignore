@@ -3,6 +3,7 @@
 *.npy
 *.jpg
 !test_contour.jpg
+!powerup.jpg
 *.jpeg
 *.mp4
 *.caffemodel
