@@ -43,10 +43,10 @@ class commandRecognizer:
 #example usecase
 
 #example callbacks for commands/pause/any functionality we need
-def ex1():
-    print("activate command called")
-def ex2():
-    print("help command called")
+# def ex1():
+#     print("activate command called")
+# def ex2():
+#     print("help command called")
 
 #Example keywords being linked to the callbacks
 # keywords_example = {

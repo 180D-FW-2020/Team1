@@ -51,7 +51,6 @@ class Skeleton():
         self.level_number = 0
         self.uservid_weight = 1
         self.mode = -1 # 0 for single player, 1 for multi player
-        self.voice.listen()
 
     def show_screen(self, screen_type):
         frame = np.zeros(shape=[480, 640, 3], dtype=np.uint8)
