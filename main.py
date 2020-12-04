@@ -6,6 +6,7 @@ overall handler for the output to user
 from PoseEstimation import *
 from ContourDetection import *
 from voice import *
+from mqtt import *
 import cv2
 import time 
 import numpy as np
@@ -52,6 +53,21 @@ class Game():
         self.uservid_weight = 1
         self.mode = -1 # 0 for single player, 1 for multi player
         self.voice.listen()
+
+        #MQTT STUFF
+        self.client = mqtt.Client()
+        self.client.on_connect = on_connect
+        self.client.on_disconnect = on_disconnect
+        self.client.on_message = on_message
+
+
+        # 2. connect to a broker using one of the connect*() functions.
+        client.connect_async('mqtt.eclipse.org')
+        # client.connect("mqtt.eclipse.org")
+
+        # 3. call one of the loop*() functions to maintain network traffic flow with the broker.
+        client.loop_start()
+        # client.loop_forever()
 
     def show_screen(self, screen_type):
         frame = np.zeros(shape=[480, 640, 3], dtype=np.uint8)
@@ -245,6 +261,8 @@ class Game():
         pose.getSkeleton(frame, True, True)       
     def __del__(self):
         cv2.destroyAllWindows()
+        self.client.loop_stop()
+        self.client.disconnect()
 
 if __name__ == '__main__':
     gameSkeleton = Game()
