@@ -71,7 +71,7 @@ class Game():
         
 
     def show_screen(self, screen_type):
-        frame = np.zeros(shape=[480, 640, 3], dtype=np.uint8)
+        frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
         txt = ''
         if screen_type == 'start':
             words = ['HOLE ', 'IN ', 'THE ', 'WALL']
@@ -182,7 +182,7 @@ class Game():
     def level(self):
         contour_num = random.randint(0,len(contour_pictures)-1)
         contour = contour_pictures[contour_num]
-        frame = np.zeros(shape=[480, 640, 3], dtype=np.uint8)
+        frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
         self.show_screen('level')
         start_time = time.perf_counter()
         print(start_time)
@@ -237,7 +237,7 @@ class Game():
             print('error')
             exit(1)
     def test(self):
-        frame = np.zeros(shape=[480, 640, 3], dtype=np.uint8)
+        frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
         example_arr = [None, (352, 296), (320, 296), None, None, (416, 160), (296, 112), (256, 120), (352, 120), None, None, (488, 168), None, None, (440, 160)]
         output = contour_pictures[0]
         count = 0 
