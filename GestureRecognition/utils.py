@@ -38,14 +38,14 @@ def get_model_features(trace, generate_feature_names=False):
         features.append('accel_z_peaks')
     else:
         normalized = min_max_scaler.fit_transform(
-            trace['accel_ms2_z'].values.reshape(-1, 1))[:, 0]  # normalize
+            trace['accel_ms2_z'].values.reshape(-1, 1).astype(np.float))[:, 0]  # normalize
         normalized = normalized[0:len(normalized):5]  # subsample
         normalized = np.diff(
             (normalized > 0.77).astype(int))  # convert to binary classifier
         normalized = normalized[normalized > 0]
         features.append(sum(normalized))
         normalized = min_max_scaler.fit_transform(
-            trace['gyro_degs_z'].values.reshape(-1, 1))[:, 0]  # normalize
+            trace['gyro_degs_z'].values.reshape(-1, 1).astype(np.float))[:, 0]  # normalize
         normalized = normalized[0:len(normalized):5]  # subsample
         normalized = np.diff(
             (normalized > 0.77).astype(int))  # convert to binary classifier

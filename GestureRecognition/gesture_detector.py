@@ -196,7 +196,7 @@ class gestureRecognizer:
             prediction = model.predict([features])[0]
 
             #print(int(elapsed_ms), prediction)
-            if prediction != 'negative_trim':# and last_classification != prediction:
+            if prediction != 'negative_trim' and self.last_classification != prediction:
                 print("========================>", prediction)
             
             self.data.clear()
@@ -206,9 +206,9 @@ class gestureRecognizer:
 
         self.elapsed_ms = (datetime.datetime.now() - self.start).total_seconds() * 1000
 
-        return self.last_classification 
+        return str(self.last_classification)
 
-n = gestureRecognizer() 
+# n = gestureRecognizer() 
 
-while True:
-    n.classify()
+# while True:
+#     n.classify()
