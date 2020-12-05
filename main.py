@@ -255,12 +255,7 @@ class Game():
         while True:
             if cv2.waitKey(0):
                 break
-
-    def testVision(self):
-        pose = PoseEstimation()
-        detect = ContourDetection()
-        frame = pose.getFrame()
-        pose.getSkeleton(frame, True, True)    
+ 
 
     def __del__(self):
         cv2.destroyAllWindows()
