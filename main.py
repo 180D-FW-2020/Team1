@@ -33,6 +33,8 @@ command_dict = {
     "help" : ex2
 }
 
+powerup_file_names = [r'.\powerup.jpg']
+
 contour_file_names = [r'.\test_contour.jpg']
 contour_pictures = []
 for contour_file in contour_file_names:
@@ -42,35 +44,36 @@ for contour_file in contour_file_names:
 
 class Game():
     def __init__(self):
+        # Capturing Video
         self.cap = cv2.VideoCapture(0)
         self.width  = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+        # OpenPose
         self.PoseEstimator = PoseEstimation() # openPose implementation object
-        self.PoseDetector = ContourDetection() # pose detector algorithm created \
+        self.PoseDetector = ContourDetection() # pose detector algorithm created 
+        
+        # Voice
         self.voice = commandRecognizer(command_dict)
-        self.user_score = 0
-        self.level_number = 0
-        self.uservid_weight = 1
-        self.mode = -1 # 0 for single player, 1 for multi player
         self.voice.listen()
 
-        #MQTT STUFF
+        # MQTT
         self.client = mqtt.Client()
         self.client.on_connect = on_connect
         self.client.on_disconnect = on_disconnect
         self.client.on_message = on_message
+        self.client.connect_async('mqtt.eclipse.org') # 2. connect to a broker using one of the connect*() functions.
+        self.client.loop_start() # 3. call one of the loop*() functions to maintain network traffic flow with the broker.
 
-
-        # 2. connect to a broker using one of the connect*() functions.
-        client.connect_async('mqtt.eclipse.org')
-        # client.connect("mqtt.eclipse.org")
-
-        # 3. call one of the loop*() functions to maintain network traffic flow with the broker.
-        client.loop_start()
-        # client.loop_forever()
+        # User variables
+        self.user_score = 0
+        self.level_number = 0
+        self.uservid_weight = 1
+        self.mode = -1 # 0 for single player, 1 for multi player
+        
 
     def show_screen(self, screen_type):
-        frame = np.zeros(shape=[480, 640, 3], dtype=np.uint8)
+        frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
         txt = ''
         if screen_type == 'start':
             words = ['HOLE ', 'IN ', 'THE ', 'WALL']
@@ -137,27 +140,21 @@ class Game():
             contour_weight = 1-(1/(TIMER_THRESHOLD-2)*time_remaining) 
 
         frame = cv2.addWeighted(frame,self.uservid_weight,contour,contour_weight,0)
-        ######### start powerup code 
-        powerup = cv2.imread(r'.\powerup.jpg')
-        rows1,cols1,channels1 = powerup.shape
-        rows2,cols2,channels2 = frame.shape
-        roi = frame[(rows2-rows1):rows2, (cols2-cols1):cols2 ]
+        # start powerup code 
+        for powerup_file_name in powerup_file_names:
+            powerup = cv2.imread(powerup_file_name)
+            rows1,cols1,channels1 = powerup.shape
+            rows2,cols2,channels2 = frame.shape
+            roi = frame[(rows2-rows1):rows2, (cols2-cols1):cols2 ]
+            powerupgray = cv2.cvtColor(powerup,cv2.COLOR_BGR2GRAY)
+            ret, mask = cv2.threshold(powerupgray, 10, 255, cv2.THRESH_BINARY)
+            mask_inv = cv2.bitwise_not(mask)
+            frame_bg = cv2.bitwise_and(roi,roi,mask = mask_inv)
+            powerup_fg = cv2.bitwise_and(powerup,powerup,mask = mask)
+            dst = cv2.add(frame_bg,powerup_fg)
+            frame[(rows2-rows1):rows2, (cols2-cols1):cols2 ] = dst
+        # stop powerup code 
 
-        # Now create a mask of logo and create its inverse mask also
-        powerupgray = cv2.cvtColor(powerup,cv2.COLOR_BGR2GRAY)
-        ret, mask = cv2.threshold(powerupgray, 10, 255, cv2.THRESH_BINARY)
-        mask_inv = cv2.bitwise_not(mask)
-
-        # Now black-out the area of logo in ROI
-        frame_bg = cv2.bitwise_and(roi,roi,mask = mask_inv)
-
-        # Take only region of logo from logo image.
-        powerup_fg = cv2.bitwise_and(powerup,powerup,mask = mask)
-
-        # Put logo in ROI and modify the main image
-        dst = cv2.add(frame_bg,powerup_fg)
-        frame[(rows2-rows1):rows2, (cols2-cols1):cols2 ] = dst
-        ######### stop powerup code 
         cv2.putText(frame, "Time Remaining: {}".format(time_remaining), (10, 50), cv2.FONT_HERSHEY_COMPLEX, .8, (255, 50, 0), 2, lineType=cv2.LINE_AA)
         cv2.putText(frame, "Score: {}".format(self.user_score), (500, 50), cv2.FONT_HERSHEY_COMPLEX, .8, (255, 50, 0), 2, lineType=cv2.LINE_AA)
         # print('time remaining', time_remaining)
@@ -178,10 +175,11 @@ class Game():
         while True:
             self.level_number += 1
             self.level()
+
     def level(self):
         contour_num = random.randint(0,len(contour_pictures)-1)
         contour = contour_pictures[contour_num]
-        frame = np.zeros(shape=[480, 640, 3], dtype=np.uint8)
+        frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
         self.show_screen('level')
         start_time = time.perf_counter()
         print(start_time)
@@ -220,12 +218,14 @@ class Game():
                 self.user_score += level_score
                 self.show_screen('level_end')
                 return
+
     """
     multiplayer(self): gameplay for the multiplayer version
     @TODO: require a lot of work in this implementation. So far, I've only worked on the contour detection part of it 
     """
     def multiplayer(self):
         pass
+
     def game(self):
         self.show_screen('start')
         if self.mode == 0:
@@ -235,8 +235,9 @@ class Game():
         else:
             print('error')
             exit(1)
+            
     def test(self):
-        frame = np.zeros(shape=[480, 640, 3], dtype=np.uint8)
+        frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
         example_arr = [None, (352, 296), (320, 296), None, None, (416, 160), (296, 112), (256, 120), (352, 120), None, None, (488, 168), None, None, (440, 160)]
         output = contour_pictures[0]
         count = 0 
@@ -254,6 +255,7 @@ class Game():
         while True:
             if cv2.waitKey(0):
                 break
+ 
 
     def __del__(self):
         cv2.destroyAllWindows()

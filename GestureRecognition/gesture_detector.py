@@ -11,7 +11,7 @@ import joblib
 import subprocess
 import shlex
 
-model = joblib.load('./models/75pt_model.joblib') 
+model = joblib.load('./models/100pt_model.joblib') 
 
 CHECK_TIME_INCREMENT_MS = 200
 SAMPLE_SIZE_MS = 1500
