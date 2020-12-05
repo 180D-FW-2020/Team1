@@ -3,15 +3,14 @@ game.py: file to run the program
 overall handler for the output to user
 @TODO: 
 """
-from PoseEstimation import *
-from ContourDetection import *
+from poseEstimation import *
+from contourDetection import *
 from voice import *
 from mqtt import *
 import cv2
 import time 
 import numpy as np
 import random
-
 
 DEBUG = 0
 
@@ -123,6 +122,7 @@ class Game():
                 elif key > 0: 
                     break
  
+
     def editFrame(self, frame, start_time, contour, override_time = False):
         original = np.copy(frame)
         time_remaining = TIMER_THRESHOLD - int(time.perf_counter()-start_time)
@@ -160,6 +160,7 @@ class Game():
         # print('time remaining', time_remaining)
         return frame, time_remaining, original
 
+
     """
     singleplayer():
     input: 
@@ -175,6 +176,7 @@ class Game():
         while True:
             self.level_number += 1
             self.level()
+
 
     def level(self):
         contour_num = random.randint(0,len(contour_pictures)-1)
@@ -219,12 +221,14 @@ class Game():
                 self.show_screen('level_end')
                 return
 
+
     """
     multiplayer(self): gameplay for the multiplayer version
     @TODO: require a lot of work in this implementation. So far, I've only worked on the contour detection part of it 
     """
     def multiplayer(self):
         pass
+
 
     def game(self):
         self.show_screen('start')
@@ -235,6 +239,7 @@ class Game():
         else:
             print('error')
             exit(1)
+
             
     def test(self):
         frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
@@ -262,6 +267,10 @@ class Game():
         self.client.loop_stop()
         self.client.disconnect()
 
-if __name__ == '__main__':
+
+def main():
     gameSkeleton = Game()
     gameSkeleton.game()
+
+if __name__ == '__main__':
+    main()
