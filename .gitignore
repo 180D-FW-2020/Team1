@@ -6,7 +6,7 @@
 *.mp4
 *.caffemodel
 
-!graphics/
+!/graphics/**
 
 __pycache__/
 *.py[cod]

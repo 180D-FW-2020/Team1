@@ -86,6 +86,7 @@ class PoseEstimation():
             cv2.imwrite('Output-Points.jpg', frame)
         return frame, points
 
+
     """
     getSkeleton(self, frame, show = False, lines = False): build the skeleton of points (with the points and lines between them) and, for debugging, show 
     input: 
@@ -115,6 +116,7 @@ class PoseEstimation():
             cv2.waitKey(0)
             cv2.imwrite('Output-Skeleton.jpg', frame)
         return frame, points
+
 
     """
     getContour(self, frame, show = False): Make the contour
