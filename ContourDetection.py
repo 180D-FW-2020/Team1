@@ -9,6 +9,7 @@ class ContourDetection():
         """
         pass
     
+    
     """
     isWithinContour(self, points, contourfile): Output 
     input: 

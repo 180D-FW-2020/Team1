@@ -1,5 +1,5 @@
 """
-main.py: file to run the program
+game.py: file to run the program
 overall handler for the output to user
 @TODO: 
 """
@@ -358,6 +358,7 @@ class Game():
         else:
             print('error')
             exit(1)
+
     def test(self):
         frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
         example_arr = [None, (352, 296), (320, 296), None, None, (416, 160), (296, 112), (256, 120), (352, 120), None, None, (488, 168), None, None, (440, 160)]
