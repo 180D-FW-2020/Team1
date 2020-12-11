@@ -34,7 +34,8 @@ class commandRecognizer:
                     self.command_dictionary[key]()
 
         except sr.UnknownValueError:
-            print("Google Speech Recognition could not understand audio")
+            # print("Google Speech Recognition could not understand audio")
+            pass
         except sr.RequestError as e:
             print("Could not request results from Google Speech Recognition service; {0}".format(e))
 

@@ -6,15 +6,23 @@ overall handler for the output to user
 from PoseEstimation import *
 from ContourDetection import *
 from voice import *
-from mqtt import *
+# from mqtt import *
 import cv2
 import time 
 import numpy as np
 import random
 import os
+import paho.mqtt.client as mqtt
+import json
 
-DEBUG = 0 # 1 to see all the contours, 2 to see the points after contour detection 
 
+# MQTT connection string
+connection_string = "ece180d/team1"
+
+# 1 to see all the contours, 2 to see the points after contour detection, 3 for testing the pause button
+DEBUG = 3 
+
+# KEY Definitions
 ENTER_KEY = 13
 ESC_KEY = 27
 UP_KEY = 38
@@ -22,16 +30,19 @@ DOWN_KEY = 40
 ZERO_KEY = 48
 ONE_KEY = 49
 
-
+# WINDOW Definition 
 WINDOWNAME = 'Hole in the Wall!'
+cv2.namedWindow(WINDOWNAME, cv2.WND_PROP_FULLSCREEN)
+cv2.setWindowProperty(WINDOWNAME,cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
+
+# FILESYSTEM Definitions 
 GRAPHICS = '.\graphics\\'
 POSES = 'poses\\'
 POWERUPS = 'powerups\\'
 PATH = GRAPHICS + POSES
 DIFFICULTIES = ['easy\\', 'medium\\', 'hard\\']
-cv2.namedWindow(WINDOWNAME, cv2.WND_PROP_FULLSCREEN)
-cv2.setWindowProperty(WINDOWNAME,cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
 
+# FILESYSTEM Work 
 powerup_pictures = {}
 powerup_dir = GRAPHICS + POWERUPS
 power_up_file_names = os.listdir(powerup_dir)
@@ -63,6 +74,7 @@ if DEBUG == 1:
         cv2.imshow('test', picture)
         cv2.waitKey(0)
 
+
 class Game():
     
     def __init__(self):
@@ -85,35 +97,86 @@ class Game():
 
         # MQTT
         self.client = mqtt.Client()
-        self.client.on_connect = on_connect
-        self.client.on_disconnect = on_disconnect
-        self.client.on_message = on_message
-        self.client.connect_async('mqtt.eclipse.org') # 2. connect to a broker using one of the connect*() functions.
+        self.client.on_connect = self.on_connect
+        self.client.on_disconnect = self.on_disconnect
+        self.client.on_message = self.on_message
+        self.client.connect_async('broker.hivemq.com') # 2. connect to a broker using one of the connect*() functions.
         self.client.loop_start() # 3. call one of the loop*() functions to maintain network traffic flow with the broker.
-
+        
+        # powerups
+        self.powerup_vals = {} 
+        for powerup_file_name in power_up_file_names:
+            self.powerup_vals[powerup_file_name] = 0
+        # self.powerup_vals['speed up'] = 2
+        # self.powerup_vals['slow down'] = 2
+        self.speed_up_used = False
+        self.slow_down_used = False
+        
         # User variables
         self.user_score = 0
         self.level_number = 0
         self.uservid_weight = 1
         self.mode = -1 # 0 for single player, 1 for multi player
         self.difficulty = -1 # 0 for easy, 1 for medium, 2 for hard
-        self.TIMER_THRESHOLD = 5
+        self.TIMER_THRESHOLD = 20
+        self.play = False
+        self.reset_timer = -1
         
-        self.powerup_vals = {} 
-        for powerup_file_name in power_up_file_names:
-            self.powerup_vals[powerup_file_name] = 2
-        # self.powerup_vals['speed up'] = 2
-        # self.powerup_vals['slow down'] = 2
-        self.speed_up_used = False
-        self.slow_down_used = False
+    # start mqtt 
+    def on_connect(self, client, userdata, flags, rc):
+        print("Connection returned result: "+str(rc))
+        client.subscribe(connection_string, qos=1)
         
+    def on_disconnect(self, client, userdata, rc):
+        if rc != 0:
+            print('Unexpected Disconnect')
+        else:
+            print('Expected Disconnect')
+                
+    def on_message(self, client, userdata, message):
+        print('Received message: "' + str(message.payload) + '" on topic "' +
+        message.topic + '" with QoS ' + str(message.qos))
+        packet = json.loads(message.payload)
+        print(packet["username"])
+        print(packet["gesture"])
+        if packet["gesture"] == 'wave':
+            # add 1 to activate powerup count 
+            if self.play == False:
+                return
+            if self.powerup_vals[power_up_file_names[0]] < 3:
+                self.powerup_vals[power_up_file_names[0]] += 1
+            else:
+                pass # try to add more points for the level 
+        elif packet["gesture"] == 'tap':
+            # add 1 to help powerup count 
+            if self.play == False:
+                return
+            if self.powerup_vals[power_up_file_names[1]] < 3:
+                self.powerup_vals[power_up_file_names[1]] += 1
+            else:
+                pass # try to add more points for the level 
+        elif packet["gesture"] == 'double_tap':
+            # pause/un-pause
+            if self.play:
+                self.play = False
+                self.reset_timer = time.perf_counter()
+            else:
+                self.play = True
+                self.TIMER_THRESHOLD += int(time.perf_counter - self.reset_timer)
+                self.reset_timer = -1
+    # end mqtt
+
     def activate(self):
+        if self.play == False:
+            return
         print("activate command called")
         if self.powerup_vals[power_up_file_names[0]] > 0:
             self.powerup_vals[power_up_file_names[0]] -= 1
             self.speed_up_used = True
 
     def help(self):
+        if self.play == False:
+            return
         print("help command called")   
         if self.powerup_vals[power_up_file_names[1]] > 0:
             self.powerup_vals[power_up_file_names[1]] -= 1
@@ -165,7 +228,49 @@ class Game():
                     cv2.putText(frame, "Two-Player Mode ---- 1", (175, 350), cv2.FONT_HERSHEY_COMPLEX, .5, (255, 50, 0), 2, lineType=cv2.LINE_AA)
                     cv2.putText(frame, "-->",(135,300), cv2.FONT_HERSHEY_COMPLEX, .5, (255, 50, 0), 2, lineType=cv2.LINE_AA)
                     cv2.imshow(WINDOWNAME, frame)
-                
+        elif screen_type == 'difficulty':
+            cv2.putText(frame, 'Select a difficulty:', (140, 220), cv2.FONT_HERSHEY_COMPLEX, .8, (255, 50, 0), 2, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "-->",(135,300), cv2.FONT_HERSHEY_COMPLEX, .5, (255, 50, 0), 2, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Easy --- Enter", (175, 300), cv2.FONT_HERSHEY_COMPLEX, .5, (255, 50, 0), 2, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Medium --- \'m\'", (175, 350), cv2.FONT_HERSHEY_COMPLEX, .5, (255, 50, 0), 2, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Hard --- \'h\'", (175, 400), cv2.FONT_HERSHEY_COMPLEX, .5, (255, 50, 0), 2, lineType=cv2.LINE_AA)
+            cv2.imshow(WINDOWNAME, frame)
+            self.difficulty = 0
+            while True:
+                key = cv2.waitKey(0)
+                if key == ESC_KEY:
+                    self.__del__()
+                    exit(0)
+                elif key == ENTER_KEY:
+                    break
+                elif key == ord('e'):
+                    frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
+                    cv2.putText(frame, 'Select a difficulty:', (140, 220), cv2.FONT_HERSHEY_COMPLEX, .8, (255, 50, 0), 2, lineType=cv2.LINE_AA)
+                    self.difficulty = 0
+                    cv2.putText(frame, "-->",(135,300), cv2.FONT_HERSHEY_COMPLEX, .5, (255, 50, 0), 2, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Easy --- Enter", (175, 300), cv2.FONT_HERSHEY_COMPLEX, .5, (255, 50, 0), 2, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Medium --- \'m\'", (175, 350), cv2.FONT_HERSHEY_COMPLEX, .5, (255, 50, 0), 2, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Hard --- \'h\'", (175, 400), cv2.FONT_HERSHEY_COMPLEX, .5, (255, 50, 0), 2, lineType=cv2.LINE_AA)
+                    cv2.imshow(WINDOWNAME, frame)
+                elif key == ord('m'):
+                    frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
+                    cv2.putText(frame, 'Select a difficulty:', (140, 220), cv2.FONT_HERSHEY_COMPLEX, .8, (255, 50, 0), 2, lineType=cv2.LINE_AA)
+                    self.difficulty = 1
+                    cv2.putText(frame, "-->",(135,350), cv2.FONT_HERSHEY_COMPLEX, .5, (255, 50, 0), 2, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Easy --- \'e\'", (175, 300), cv2.FONT_HERSHEY_COMPLEX, .5, (255, 50, 0), 2, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Medium --- Enter", (175, 350), cv2.FONT_HERSHEY_COMPLEX, .5, (255, 50, 0), 2, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Hard --- \'h\'", (175, 400), cv2.FONT_HERSHEY_COMPLEX, .5, (255, 50, 0), 2, lineType=cv2.LINE_AA)
+                    cv2.imshow(WINDOWNAME, frame)
+                elif key == ord('h'):
+                    frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
+                    cv2.putText(frame, 'Select a difficulty:', (140, 220), cv2.FONT_HERSHEY_COMPLEX, .8, (255, 50, 0), 2, lineType=cv2.LINE_AA)
+                    self.difficulty = 2
+                    cv2.putText(frame, "-->",(135,400), cv2.FONT_HERSHEY_COMPLEX, .5, (255, 50, 0), 2, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Easy --- \'e\'", (175, 300), cv2.FONT_HERSHEY_COMPLEX, .5, (255, 50, 0), 2, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Medium --- \'m\'", (175, 350), cv2.FONT_HERSHEY_COMPLEX, .5, (255, 50, 0), 2, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Hard --- Enter", (175, 400), cv2.FONT_HERSHEY_COMPLEX, .5, (255, 50, 0), 2, lineType=cv2.LINE_AA)
+                    cv2.imshow(WINDOWNAME, frame)       
+
         elif screen_type == 'level':
             words = ['LEVEL ', '{}'.format(self.level_number)]        
             for word in words:
@@ -205,28 +310,16 @@ class Game():
                     exit(0)
                 elif key > 0: 
                     break
-        elif screen_type == 'difficulty':
-            cv2.putText(frame, 'Select a difficulty:', (140, 220), cv2.FONT_HERSHEY_COMPLEX, .8, (255, 50, 0), 2, lineType=cv2.LINE_AA)
-            cv2.putText(frame, "Easy --- Press \'e\'", (175, 300), cv2.FONT_HERSHEY_COMPLEX, .5, (255, 50, 0), 2, lineType=cv2.LINE_AA)
-            cv2.putText(frame, "Medium --- Press \'m\'", (175, 350), cv2.FONT_HERSHEY_COMPLEX, .5, (255, 50, 0), 2, lineType=cv2.LINE_AA)
-            cv2.putText(frame, "Hard --- Press \'h\'", (175, 400), cv2.FONT_HERSHEY_COMPLEX, .5, (255, 50, 0), 2, lineType=cv2.LINE_AA)
+        elif screen_type == 'pause':
+            cv2.putText(frame, 'Pause Screen', (140, 220), cv2.FONT_HERSHEY_COMPLEX, .8, (255, 50, 0), 2, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Main Menu --- Enter", (175, 300), cv2.FONT_HERSHEY_COMPLEX, .5, (255, 50, 0), 2, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Exit --- ESC Key", (175, 350), cv2.FONT_HERSHEY_COMPLEX, .5, (255, 50, 0), 2, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Un-pause ---- Double Tap Gesture", (175, 400), cv2.FONT_HERSHEY_COMPLEX, .5, (255, 50, 0), 2, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "-->",(135,300), cv2.FONT_HERSHEY_COMPLEX, .5, (255, 50, 0), 2, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
-            while True:
-                key = cv2.waitKey(0)
-                if key == ESC_KEY:
-                    self.__del__()
-                    exit(0)
-                elif key == ord('e'):
-                    self.difficulty = 0
-                    break
-                elif key == ord('m'):
-                    self.difficulty = 1
-                    break
-                elif key == ord('h'):
-                    self.difficulty = 2
-                    break
-            
-            
+            if DEBUG == 3:
+                return cv2.waitKey(0)
+             
 
     def editFrame(self, frame, start_time, contour, override_time = False):
         original = np.copy(frame)
@@ -275,6 +368,7 @@ class Game():
         return frame, time_remaining, original
 
     def level(self):
+        self.play = True
         timer_old = self.TIMER_THRESHOLD
         
         if self.difficulty == 0:
@@ -299,12 +393,32 @@ class Game():
                 exit(0)
             elif key == ord('s') or self.speed_up_used == True:
                 override_time = True
-            # elif key == ord('m'):
-            #     self.game()
+            
+            if DEBUG == 3:
+                if key == ord('p'):
+                    if self.play:
+                        self.play = False
+                        self.reset_timer = time.perf_counter()
+                        pass
+                    while self.play == False:
+                        new_key = self.show_screen('pause')
+                        if new_key == ord('p'):
+                            self.TIMER_THRESHOLD += int(time.perf_counter() - self.reset_timer)
+                            self.reset_timer = -1
+                            self.play = True
+                        elif new_key == ESC_KEY:
+                            self.__del__()
+                            exit(0)
+                        elif new_key == ENTER_KEY:
+                            self.game()
+                        
+            else: # use only gesture code 
+                pass
             if self.slow_down_used == True:
                 self.TIMER_THRESHOLD *= 2
                 self.slow_down_used = False
-                
+            
+              
             _, frame = self.cap.read()
             frame, time_remaining, original = self.editFrame(frame, start_time, contour, override_time=override_time)
             cv2.imshow(WINDOWNAME, frame)
@@ -331,7 +445,7 @@ class Game():
                 self.user_score += level_score
                 self.show_screen('level_end',points=level_score)
                 return
-
+            pass
 
     def singleplayer(self):
         while self.difficulty == -1:
@@ -340,7 +454,7 @@ class Game():
             self.level_number += 1
             self.slow_down_used = False
             self.speed_up_used = False
-            
+            self.play = False
             self.level()
             if self.TIMER_THRESHOLD > 5:
                 self.TIMER_THRESHOLD -= 2
@@ -350,6 +464,14 @@ class Game():
         pass
 
     def game(self):
+        self.user_score = 0
+        self.level_number = 0
+        self.uservid_weight = 1
+        self.mode = -1 # 0 for single player, 1 for multi player
+        self.difficulty = -1 # 0 for easy, 1 for medium, 2 for hard
+        self.TIMER_THRESHOLD = 20
+        self.play = False
+        self.reset_timer = -1
         self.show_screen('start')
         if self.mode == 0:
             self.singleplayer()
