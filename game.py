@@ -20,7 +20,7 @@ import json
 connection_string = "ece180d/team1"
 
 # 1 to see all the contours, 2 to see the points after contour detection, 3 for testing the pause button
-DEBUG = 3 
+DEBUG = 0
 
 # KEY Definitions
 ENTER_KEY = 13
@@ -70,7 +70,7 @@ contour_pictures.extend(medium_contours)
 contour_pictures.extend(hard_contours)
 if DEBUG == 1:
     print(len(contour_pictures))
-    for picture in contour_pictures:
+    for picture in easy_contours:
         cv2.imshow('test', picture)
         cv2.waitKey(0)
 
@@ -90,7 +90,7 @@ class Game():
         # Voice
         self.command_dict = {   
             "activate" : self.activate,
-            "help" : self.help
+            "slow down" : self.help
         }
         self.voice = commandRecognizer(self.command_dict)
         self.voice.listen()
@@ -162,7 +162,7 @@ class Game():
                 self.reset_timer = time.perf_counter()
             else:
                 self.play = True
-                self.TIMER_THRESHOLD += int(time.perf_counter - self.reset_timer)
+                self.TIMER_THRESHOLD += int(time.perf_counter() - self.reset_timer)
                 self.reset_timer = -1
     # end mqtt
 
@@ -393,7 +393,12 @@ class Game():
                 exit(0)
             elif key == ord('s') or self.speed_up_used == True:
                 override_time = True
-            
+            if self.play == False:
+                if key == ENTER_KEY:
+                    self.game()
+                self.show_screen('pause')
+                pass
+                continue
             if DEBUG == 3:
                 if key == ord('p'):
                     if self.play:
@@ -433,10 +438,12 @@ class Game():
                 while True:
                     if cv2.waitKey(100):
                         break
+                print('original shape', original.shape)
+                print(contour.shape)
                 frame, points = self.PoseEstimator.getPoints(original)
                 level_score = self.PoseDetector.isWithinContour(points, contour)
                 if DEBUG == 2:
-                    cv2.imshow(WINDOWNAME, frame)
+                    cv2.imshow(WINDOWNAME, original)
                     while True:
                         if cv2.waitKey(0):
                             break

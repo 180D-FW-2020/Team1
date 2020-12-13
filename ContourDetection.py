@@ -27,7 +27,7 @@ class ContourDetection():
         for point in points:
             if point == None or point[1] >= 480 or point[0] >= 640:
                 continue
-                # cv2.circle(output, (point[0],point[1]), 8, (0, 255, 255), thickness=-1, lineType=cv2.FILLED)
-            if contour.item(point[1],point[0],0) > 65 and contour.item(point[1],point[0],1) > 65 and contour.item(point[1],point[0],2) > 65:
-                count += 1
+            # print(contour.item(point[1],point[0],0), contour.item(point[1],point[0],1), contour.item(point[1],point[0],2))
+            if contour.item(point[1],point[0],0) < 65 and contour.item(point[1],point[0],1) < 65 and contour.item(point[1],point[0],2) < 65:
+                count +=1
         return count
