@@ -25,7 +25,7 @@ python mqtt.py
 # Source Code Descriptions:
 | File | Description |
 | --- | --- |
-| `GestureRecognition` | Contains gesture recognition code, including IMU libraries and gesture data. <u1><li>test</li><li>item2</li></u1>|
+| `GestureRecognition` | Contains gesture recognition code, including IMU libraries and gesture data.<br>line1<br>line2|
 | `graphics` | Includes images necesary for gameplay and user interface. |
 | `pose` | Folder containing modules used by openpose for pose recognition. |
 | `ContourDetection.py` | Contour detection code to check if someone is within the "hole". |
