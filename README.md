@@ -11,3 +11,28 @@ See requirements.txt
 pip install pipreqs
 pip install -r requirements.txt
 ```
+
+# Running the Game
+On your laptop:
+```
+python game.py
+```
+On the IMU:
+```
+python mqtt.py
+```
+
+# Source Code Descriptions:
+| File | Description |
+| --- | --- |
+| `GestureRecognition` | Contains gesture recognition code, including IMU libraries and gesture data. |
+| `graphics` | Includes images necesary for gameplay and user interface. |
+| `pose` | Folder containing modules used by openpose for pose recognition. |
+| `ContourDetection.py` | Contour detection code to check if someone is within the "hole". |
+| `game.py` | Main code running the overall game. |
+| `mqtt.py` | Code sending MQTT packets and running gesture recognition on the RPI. |
+| `PoseEstimation.py` | Code using the OpenPose library to recognize a player's position on the screen. |
+| `README.md` | This file with usage and documentation. |
+| `requirements.txt` | Dependency information. |
+| `setup.py` | Script to set up the game. |
+| `voice.py` | Voice recognition code to activate powerups. |
