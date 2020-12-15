@@ -17,7 +17,7 @@ On your laptop:
 ```
 python game.py
 ```
-On the IMU:
+On the Raspberry Pi:
 ```
 python mqtt.py
 ```
@@ -25,7 +25,7 @@ python mqtt.py
 # Source Code Descriptions:
 | File | Description |
 | --- | --- |
-| `GestureRecognition` | Contains gesture recognition code, including IMU libraries and gesture data. |
+| `GestureRecognition` | Contains gesture recognition code, including IMU libraries and gesture data.<br> - **Sources:** in-class labs<br> - **Decisions:** reeeeeeeeeee <br> - **Bugs:** reeeeeeeeee <br> - **TODO:** reeeeeeeeee|
 | `graphics` | Includes images necesary for gameplay and user interface. |
 | `pose` | Folder containing modules used by openpose for pose recognition. |
 | `ContourDetection.py` | Contour detection code to check if someone is within the "hole". |
