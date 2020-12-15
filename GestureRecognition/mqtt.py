@@ -36,7 +36,7 @@ client.on_message = on_message
 
 
 # 2. connect to a broker using one of the connect*() functions.
-client.connect_async('mqtt.eclipse.org')
+client.connect_async('broker.hivemq.com')
 # client.connect("mqtt.eclipse.org")
 
 n = gestureRecognizer() 
