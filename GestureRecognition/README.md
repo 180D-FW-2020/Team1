@@ -1,4 +1,4 @@
-# Source Code Descriptions:
+# Source Code Descriptions
 | File | Description |
 | --- | --- |
 | `models` | Models generated with machine learning. |
@@ -10,13 +10,16 @@
 | `requirements.txt` | Dependency information. |
 | `utils.py` | Utility functions used by both collect_data.py and gesture_detector.py to collect data. |
 
-# Source Code
+# Bugs 
+- Double Tap and Tap Gestsures get confused ~15% of the time. 
 
-Collecting data using [OzzMaker BerryIMUv3 (LSM6DSL and LIS3MDL)](http://ozzmaker.com/berryimu) 
+# TODO
+- Add more gestures 
+- Refine current model by generating more samples from different people. 
 
----------------------------------------------------------------------
-
-Machine Learning Training based off of [Magic Wand Project by Jennifer Wang](https://github.com/jewang/gesture-demo)
+# Sources
+- Collecting data using [OzzMaker BerryIMUv3 (LSM6DSL and LIS3MDL)](http://ozzmaker.com/berryimu) 
+- Machine Learning Training based off of [Magic Wand Project by Jennifer Wang](https://github.com/jewang/gesture-demo)
 
 # Dependencies 
 See requirements.txt
