@@ -6,7 +6,6 @@
 !powerup.jpg
 *.jpeg
 *.mp4
-*.caffemodel
 
 !/graphics/**
 
