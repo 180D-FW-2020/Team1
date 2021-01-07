@@ -19,8 +19,8 @@ class PoseEstimation():
             weightsFile = "pose/coco/pose_iter_440000.caffemodel"
             self.nPoints = 18
             self.POSE_PAIRS = [ [1,0],[1,2],[1,5],[2,3],[3,4],[5,6],[6,7],[1,8],[8,9],[9,10],[1,11],[11,12],[12,13],[0,14],[0,15],[14,16],[15,17] ]
-        elif self.mode == "BODY_25":
-            protoFile = "pose/coco/pose_deploy.prototxt"
+        elif self.mode == "BODY25":
+            protoFile = "pose/body_25/pose_deploy.prototxt"
             weightsFile = "pose/body_25/pose_iter_584000.caffemodel"
             self.nPoints = 25
             self.POSE_PAIRS = [ [1,0],[1,2],[1,5],[2,3],[3,4],[5,6],[6,7],[1,8],[8,9],[8,12],[9,10],[10,11],[11,22],[11,24],[12,13],[13,14],[14,19],[14,21],[0,15],[0,16],[15,17],[16,18],[19,20],[22,23] ]
