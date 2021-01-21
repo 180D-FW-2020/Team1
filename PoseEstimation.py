@@ -175,7 +175,6 @@ class PoseEstimation():
                 cv2.line(img, points[partA], points[partB], 255, thickness=80, lineType=cv2.FILLED)
         
         if show:
-            img.COLOR_BGR2GRAY()
             cv2.imshow('Output-Contour', img) 
             cv2.waitKey(0) 
         cv2.imwrite(output, img)
