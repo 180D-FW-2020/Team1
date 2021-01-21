@@ -21,8 +21,6 @@ from botocore.client import ClientError
 # OUTPUT = '.\output\\'
 # if os.path.isdir(OUTPUT) == False:
 #     os.makedir(OUTPUT)
-ACCESS_KEY = 'AKIA2B7KCGHZSS6SFF6L'
-SECRET_KEY = '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'
 region='us-east-1'
 ROOM = 'ece180d-team1-room-'
 
