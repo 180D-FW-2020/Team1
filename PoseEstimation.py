@@ -14,20 +14,26 @@ class PoseEstimation():
             weightsFile = "pose/mpi/pose_iter_160000.caffemodel"
             self.nPoints = 15
             self.POSE_PAIRS = [ [0,1],[1,2],[2,3],[3,4],[1,5],[5,6],[6,7],[1,14],[14,8],[8,9],[9,10],[14,11],[11,12],[12,13] ]
+        '''
         elif self.mode == "COCO":
             protoFile = "pose/coco/pose_deploy_linevec.prototxt"
             weightsFile = "pose/coco/pose_iter_440000.caffemodel"
             self.nPoints = 18
             self.POSE_PAIRS = [ [1,0],[1,2],[1,5],[2,3],[3,4],[5,6],[6,7],[1,8],[8,9],[9,10],[1,11],[11,12],[12,13],[0,14],[0,15],[14,16],[15,17] ]
-
+        elif self.mode == "BODY25":
+            protoFile = "pose/body_25/pose_deploy.prototxt"
+            weightsFile = "pose/body_25/pose_iter_584000.caffemodel"
+            self.nPoints = 25
+            self.POSE_PAIRS = [ [1,0],[1,2],[1,5],[2,3],[3,4],[5,6],[6,7],[1,8],[8,9],[8,12],[9,10],[10,11],[11,22],[11,24],[12,13],[13,14],[14,19],[14,21],[0,15],[0,16],[15,17],[16,18],[19,20],[22,23] ]
+        '''
         # Read network into Memory
         self.net = cv2.dnn.readNetFromCaffe(protoFile, weightsFile)
         if device == "cpu":
             self.net.setPreferableBackend(cv2.dnn.DNN_TARGET_CPU)
             print("Using CPU device")
         elif device == "gpu":
-            self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
-            self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
+            self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_DEFAULT)
+            self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_OPENCL)
             print("Using GPU device")
 
 
@@ -67,10 +73,10 @@ class PoseEstimation():
             threshold = 0.1
 
             if prob > threshold:
-                if dots:
+                if show and dots:
                     cv2.circle(frame, (int(x), int(y)), 8, (0, 255, 255), thickness=-1, lineType=cv2.FILLED)
                     if dotsVals:
-                        put = "{}:({}, {})".format(i,int(x),int(y))
+                        put = "{}:({}, {})".format(i, int(x), int(y))
                     else:
                         put = "{}".format(i)
                     cv2.putText(frame, put, (int(x), int(y)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, lineType=cv2.LINE_AA)
@@ -99,7 +105,7 @@ class PoseEstimation():
     @NOTE: 
     @NOTE: 
     """
-    def getSkeleton(self, frame, show = False, lines = False):
+    def getSkeleton(self, frame, show = False):
         _, points = self.getPoints(frame)
 
         # Draw skeleton
@@ -108,13 +114,13 @@ class PoseEstimation():
             partB = pair[1]
 
             if points[partA] and points[partB]:
-                if lines:
-                    cv2.line(frame, points[partA], points[partB], (0, 255, 255), 2)
+                cv2.line(frame, points[partA], points[partB], (0, 255, 255), 2)
                 cv2.circle(frame, points[partA], 8, (0, 0, 255), thickness=-1, lineType=cv2.FILLED)
         if show:
             cv2.imshow('Output-Skeleton', frame)
             cv2.waitKey(0)
             cv2.imwrite('Output-Skeleton.jpg', frame)
+            
         return frame, points
 
 
@@ -123,6 +129,7 @@ class PoseEstimation():
     input: 
         frame -> the video frame that we want the skeleton to go on top of
         show -> debugging to show the skeleton only 
+        output -> output file name
     output: 
         frame -> the modified frame with the score on it
         points -> the OpenPose output points
@@ -147,6 +154,33 @@ class PoseEstimation():
 
         return frame, points
 
+    """
+    getContour(self, frame, show = False): Make the contour from set of points rather than frame
+    input: 
+        points -> OpenPose input points
+        show -> debugging to show the skeleton only 
+    output: 
+        img -> the modified frame with the score on it
+        points -> the OpenPose output points
+    @TODO: create contour logic 
+    """
+    def getContourFromPoints(self, points, show = False, output='Output-Contour.jpg'):
+        img = np.zeros((480,640))
+
+        for pair in self.POSE_PAIRS:
+            partA = pair[0]
+            partB = pair[1]
+
+            if points[partA] and points[partB]:
+                cv2.line(img, points[partA], points[partB], (255, 255, 255), thickness=80, lineType=cv2.FILLED)
+        
+        if show:
+            cv2.imshow('Output-Contour', img) 
+            cv2.waitKey(0) 
+        cv2.imwrite(output, img)
+
+        return img, points
+        
 
     def __del__(self):
         """
