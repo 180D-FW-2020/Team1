@@ -6,6 +6,7 @@
 !powerup.jpg
 *.jpeg
 *.mp4
+testVision.py
 
 !/graphics/**
 
