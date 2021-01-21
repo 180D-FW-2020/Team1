@@ -7,6 +7,8 @@
 *.jpeg
 *.mp4
 *.caffemodel
+main.py
+
 
 !/graphics/**
 
