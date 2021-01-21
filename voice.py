@@ -15,7 +15,7 @@ class commandRecognizer:
             self.r.adjust_for_ambient_noise(source)  # we only need to calibrate once, before we start listening
 
     def listen(self):
-        self.stop_listening = self.r.listen_in_background(self.m, self.rec, phrase_time_limit=1)
+        self.stop_listening = self.r.listen_in_background(self.m, self.rec, phrase_time_limit=2)
     
     def stop(self):
         self.stop_listening(wait_for_stop=False)
@@ -34,7 +34,8 @@ class commandRecognizer:
                     self.command_dictionary[key]()
 
         except sr.UnknownValueError:
-            print("Google Speech Recognition could not understand audio")
+            # print("Google Speech Recognition could not understand audio")
+            pass
         except sr.RequestError as e:
             print("Could not request results from Google Speech Recognition service; {0}".format(e))
 
