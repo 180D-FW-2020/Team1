@@ -3,17 +3,17 @@ import time
 import numpy as np
 
 class PoseEstimation():
-    def __init__(self, mode = "MPI", device = "cpu"):
+    def __init__(self, device = "cpu"):
         """
         Constructor
         """
-        self.mode = mode
+        # self.mode = mode
         # Select model/specify paths
-        if self.mode == "MPI":
-            protoFile = "pose/mpi/pose_deploy_linevec_faster_4_stages.prototxt"
-            weightsFile = "pose/mpi/pose_iter_160000.caffemodel"
-            self.nPoints = 15
-            self.POSE_PAIRS = [ [0,1],[1,2],[2,3],[3,4],[1,5],[5,6],[6,7],[1,14],[14,8],[8,9],[9,10],[14,11],[11,12],[12,13] ]
+        # if self.mode == "MPI":
+        protoFile = "pose/mpi/pose_deploy_linevec_faster_4_stages.prototxt"
+        weightsFile = "pose/mpi/pose_iter_160000.caffemodel"
+        self.nPoints = 15
+        self.POSE_PAIRS = [ [0,1],[1,2],[2,3],[3,4],[1,5],[5,6],[6,7],[1,14],[14,8],[8,9],[9,10],[14,11],[11,12],[12,13] ]
         '''
         elif self.mode == "COCO":
             protoFile = "pose/coco/pose_deploy_linevec.prototxt"
