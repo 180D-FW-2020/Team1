@@ -105,7 +105,7 @@ class PoseEstimation():
     @NOTE: 
     @NOTE: 
     """
-    def getSkeleton(self, frame, show = False, lines = False):
+    def getSkeleton(self, frame, show = False):
         _, points = self.getPoints(frame)
 
         # Draw skeleton
@@ -114,13 +114,13 @@ class PoseEstimation():
             partB = pair[1]
 
             if points[partA] and points[partB]:
-                if lines:
-                    cv2.line(frame, points[partA], points[partB], (0, 255, 255), 2)
+                cv2.line(frame, points[partA], points[partB], (0, 255, 255), 2)
                 cv2.circle(frame, points[partA], 8, (0, 0, 255), thickness=-1, lineType=cv2.FILLED)
         if show:
             cv2.imshow('Output-Skeleton', frame)
             cv2.waitKey(0)
             cv2.imwrite('Output-Skeleton.jpg', frame)
+            
         return frame, points
 
 
@@ -129,6 +129,7 @@ class PoseEstimation():
     input: 
         frame -> the video frame that we want the skeleton to go on top of
         show -> debugging to show the skeleton only 
+        output -> output file name
     output: 
         frame -> the modified frame with the score on it
         points -> the OpenPose output points
