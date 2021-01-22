@@ -21,8 +21,7 @@ from botocore.client import ClientError
 # OUTPUT = '.\output\\'
 # if os.path.isdir(OUTPUT) == False:
 #     os.makedir(OUTPUT)
-ACCESS_KEY = 'AKIA2B7KCGHZSS6SFF6L'
-SECRET_KEY = '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'
+
 region='us-east-1'
 ROOM = 'ece180d-team1-room-'
 
@@ -211,30 +210,26 @@ class Game():
         if valid == 1:
             self.game()
         try:
-            # self.client.head_object(Bucket=self.bucket, Key='file.txt')
-            self.client_aws.download_file(self.room_name, 'room_info.csv', 'room_info.csv') 
+            self.client_aws.head_object(Bucket=self.room_name, Key='room_info.csv')
+        except ClientError as e:
+            #print('does not exist') ## you're the creator 
+            self.creator = 1 
             self.client_mqtt.subscribe(self.room_name, qos=1)
-            packet = {
-                "username": ''.join(self.nickname),
-                "joining": True,
-                "score": 0 
-            }
-            client.publish(self.room_name, json.dumps(packet), qos=1)
-
-
-
-            # check if room is being occupied 
-            # if not, then you're the creator 
-            #bucket name, remote file name, local file name
-            return
-        except: 
-            creator = 1
             f = open("room_info.csv", "w")
             f.write('{},{}'.format(''.join(self.nickname),self.user_score))
             f.close()
             self.client_aws.upload_file('room_info.csv', self.room_name, "room_info.csv")
             #local file name, bucket, remote file name
-        print(''.join(self.room))
+            return
+
+        # you're the joiner 
+        self.client_mqtt.subscribe(self.room_name, qos=1)
+        packet = {
+            "username": ''.join(self.nickname),
+            "score": 0 
+        }
+        client.publish(self.room_name, json.dumps(packet), qos=1)
+    
     
     def activate(self):
         if self.play == False:
