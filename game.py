@@ -215,12 +215,12 @@ class Game():
             print(packet["join"])
             if packet["join"] == True:
                 # joining 
-                f = open("room_info.csv", "w")
-                f.write('{},{}'.format(user, packet["score"]))
+                f = open("room_info.csv", "a")
+                f.write('{},{}\n'.format(user, packet["score"]))
                 f.close()
                 self.client_aws.upload_file('room_info.csv', self.room_name, "room_info.csv")
             pass 
-        if "start_mult" and self.creator == 0:
+        if "start_mult" in packet and self.creator == 0:
             self.multi_start = 1
         
     # end mqtt
@@ -247,7 +247,7 @@ class Game():
             self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
             print(self.room_name)
             f = open("room_info.csv", "w")
-            f.write('{},{}'.format(''.join(self.nickname),self.user_score))
+            f.write('{},{}\n'.format(''.join(self.nickname),self.user_score))
             f.close()
             self.client_aws.upload_file('room_info.csv', self.room_name, "room_info.csv")
             #local file name, bucket, remote file name
@@ -534,12 +534,13 @@ class Game():
             cv2.putText(frame, "Please wait for creator to start the game".format(ROOM+''.join(self.room)),(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             while True:
-                key = cv2.waitKey(0)
+                key = cv2.waitKey(10)
                 if key == ESC_KEY:
                     self.__del__()
                     exit(0)
                 if self.multi_start == 1:
-                    break
+                    return
+                pass
                 
     def editFrame(self, frame, start_time, contour, override_time = False):
         original = np.copy(frame)
@@ -693,9 +694,11 @@ class Game():
         print(self.room_name)
         self.createaws()
         if self.creator == 1:
-            self.show_screen('start_game_multi')
+            self.show_screen('start_game_multi') 
+            time.sleep(3)
         else: 
             self.show_screen('waiting_for_creator')
+
 
     def game(self):
         self.user_score = 0
