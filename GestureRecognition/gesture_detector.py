@@ -11,7 +11,7 @@ import joblib
 import subprocess
 import shlex
 
-model = joblib.load('./models/199pt_model.joblib') 
+model = joblib.load('./models/236pt_model.joblib') 
 
 CHECK_TIME_INCREMENT_MS = 200
 SAMPLE_SIZE_MS = 1500
@@ -190,7 +190,7 @@ class gestureRecognizer:
 
         if self.elapsed_ms - self.last_classified >= CHECK_TIME_INCREMENT_MS and len(self.data) == self.maxlen:
             df = pd.DataFrame(list(self.data), columns=self.header)
-            features = utils.get_model_features(df) 
+            features = utils.get_model_features(df) + [0]
             # for i in features: 
             #     print(i)
             prediction = model.predict([features])[0]

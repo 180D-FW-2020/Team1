@@ -8,7 +8,6 @@
 - 
 
 # TODO
-- Enable for GPUs (e.g. NVIDIA CUDA)
 - Make OpenPose processing faster in general
 - Add camera calibration for extrinsic camera specs
 - Unity support

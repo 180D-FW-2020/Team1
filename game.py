@@ -21,7 +21,6 @@ from botocore.client import ClientError
 # OUTPUT = '.\output\\'
 # if os.path.isdir(OUTPUT) == False:
 #     os.makedir(OUTPUT)
-
 region='us-east-1'
 ROOM = 'ece180d-team1-room-'
 
@@ -262,6 +261,7 @@ class Game():
             "join": True
         }
         self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
+
     
     def activate(self):
         if self.play == False:
@@ -420,6 +420,7 @@ class Game():
                 cv2.putText(frame, self.room[i], (150+ 20*i,300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             num = 0
+
             while True:
                 key = cv2.waitKey(0)
                 if key == ESC_KEY:
@@ -512,6 +513,7 @@ class Game():
                         cv2.putText(frame, '*', (115+ 20*i,300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.imshow(WINDOWNAME, frame)
             return
+
         elif screen_type == 'start_game_multi':
             cv2.putText(frame, "Press Enter to Start the Game".format(ROOM+''.join(self.room)),(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
@@ -541,7 +543,7 @@ class Game():
                 if self.multi_start == 1:
                     return
                 pass
-                
+
     def editFrame(self, frame, start_time, contour, override_time = False):
         original = np.copy(frame)
         time_elapsed = int(time.perf_counter()-start_time)
@@ -698,7 +700,6 @@ class Game():
             time.sleep(3)
         else: 
             self.show_screen('waiting_for_creator')
-
 
     def game(self):
         self.user_score = 0
