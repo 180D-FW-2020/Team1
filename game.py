@@ -159,7 +159,7 @@ class Game():
         self.bucket = None
         self.creator = 0 # 1 for creator, 0 for joiner 
         self.room_name = '' 
-        self.multi_start = 0
+        self.multi_start = 0 #should we start or no (creator tells the rest)
 
         # User variables
         self.user_score = 0
@@ -172,12 +172,12 @@ class Game():
         self.reset_timer = -1
 
         # multi user variables
-        self.send_my_pose = 0
-        self.move_on = 1
-        self.pose_updated = 0
-        self.pose = []
-        self.my_state
-
+        self.send_my_pose = 0 #1 means I'm the pose leader --> local user makes a pose
+        self.move_on = 1 #1 means round is over, creator chooses next pose leader --> CREATOR only 
+        self.pose_updated = 0 #1 means pose leader sent pose over mqtt --> ALL users should fit in hole 
+        self.pose = [] # the pose we received from the pose leader 
+        # self.my_state
+        self.pose_leader = ''
     # start mqtt 
     def on_connect(self, client, userdata, flags, rc):
         print("Connection returned result: "+str(rc))
@@ -221,21 +221,28 @@ class Game():
         packet = json.loads(message.payload)
         print(packet["username"])
         user = packet["username"]
-        if "record_my_pose" in packet and packet["record_my_pose"] == ''.join(self.nickname):
-            self.send_my_pose = 1
-            return 
 
         if "round_over" in packet and self.creator == 1:
             self.move_on = 1
 
+        if "leader" in packet:
+            if packet["leader"] == ''.join(self.nickname): ## I am the leader 
+                self.pose_leader = packet["leader"]
+                self.send_my_pose = 1
+            else: ## ___ is the leader 
+                self.pose_leader = packet["leader"]
+                self.pose_updated = 0 
+                self.move_on = 0
+                self.send_my_pose = 0 
+         
         if "gesture" in packet:
             print(packet["gesture"])
             self.on_gesture(packet["gesture"])
         if "send_my_pose" in packet:
             self.pose_updated = 1
-            self.pose = packet["send_my_pose"]
+            self.pose = packet["pose"]
             print(type(self.pose))
-            print(packet["send_my_pose"])
+            print(packet["pose"])
             pass 
         if "score" in packet:
             print(packet["score"])
@@ -582,13 +589,12 @@ class Game():
         elif screen_type == 'waiting_for_new_pose':
             cv2.putText(frame, "Please wait for user ___ to create a pose".format(ROOM+''.join(self.room)),(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
-            while True:
+            while True: #while in this loop, we're waiting for pose leader 
                 key = cv2.waitKey(10)
                 if key == ESC_KEY:
                     self.__del__()
                     exit(0)
-                if self.pose_updated == 1:
-                    # print('we made it')
+                if self.pose_updated == 1: #local user tries to fit in the hole now
                     return
                 pass    
     def editFrame(self, frame, start_time, contour, override_time = False):
@@ -763,7 +769,7 @@ class Game():
                 self.send_my_pose = 0
                 packet = {
                     "username": ''.join(self.nickname),
-                    "turn_over": 1,
+                    "send_my_pose": 1,
                     "pose": test_points
                 }
                 self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
@@ -790,7 +796,7 @@ class Game():
                     continue
                 print(self.users[cur_user])
                 if self.users[cur_user] == ''.join(self.nickname):
-                    print('hello')
+                    # print('hello')
                     self.send_my_pose = 1
                     self.send_pose()
                     while True:
@@ -800,7 +806,7 @@ class Game():
                     print('goodbye')
                     packet = {
                         "username": ''.join(self.nickname),
-                        "turn": self.users[cur_user]
+                        "leader": self.users[cur_user]
                     }
                     self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
                     self.move_on = 0
