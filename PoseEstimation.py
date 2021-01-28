@@ -138,7 +138,7 @@ class PoseEstimation():
     def getContour(self, frame, show = False, output='Output-Contour.jpg'):
         _, points = self.getPoints(frame)
 
-        img = np.zeros((480,640))
+        img = np.zeros((480,640), np.uint8)
 
         for pair in self.POSE_PAIRS:
             partA = pair[0]
@@ -165,7 +165,7 @@ class PoseEstimation():
     @TODO: create contour logic 
     """
     def getContourFromPoints(self, points, show = False, output='Output-Contour.jpg'):
-        img = np.zeros((480,640))
+        img = np.zeros((480,640), np.uint8)
 
         for pair in self.POSE_PAIRS:
             partA = pair[0]
