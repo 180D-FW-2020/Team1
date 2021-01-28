@@ -165,7 +165,7 @@ class Game():
 
         # multi user variables
         self.send_my_pose = 0
-        self.move_on = 0
+        self.move_on = 1
         self.pose_updated = 0
         self.pose = []
     # start mqtt 
@@ -724,6 +724,7 @@ class Game():
                 self.TIMER_THRESHOLD -= 2
     def send_pose(self):
         ## include screen to say "you're up"
+        self.move_on = 0
         start_time = time.perf_counter()
         while self.send_my_pose == 1: 
             key = cv2.waitKey(1)
