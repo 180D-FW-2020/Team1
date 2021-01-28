@@ -246,6 +246,7 @@ class Game():
             pass 
         if "score" in packet:
             print(packet["score"])
+            # indicate next round
             pass 
         if "join" in packet and self.creator == 1: # assuming initial message sends score
             # implement some stuff creator has to do when new players join via mqtt 
@@ -837,9 +838,9 @@ class Game():
                         _, frame = self.cap.read()
                         time_elapsed = int(time.perf_counter() - start_time)
                         time_remaining = 5 - time_elapsed
+                        cv2.imshow(WINDOWNAME, frame)
                         if time_remaining <= 0: 
                             cv2.imshow(WINDOWNAME, frame)
-                            self.send_my_pose = 0
                             packet = {
                                 "username": ''.join(self.nickname),
                                 "score": 5
