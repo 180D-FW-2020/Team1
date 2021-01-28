@@ -155,7 +155,7 @@ class PoseEstimation():
         return frame, points
 
     """
-    getContour(self, frame, show = False): Make the contour from set of points rather than frame
+    getContour(self, points, show = False, output='Output-Contour.jpg'): Make the contour from set of points rather than frame
     input: 
         points -> OpenPose input points
         show -> debugging to show the skeleton only 
@@ -168,11 +168,10 @@ class PoseEstimation():
         img = np.zeros((480,640,3), np.uint8)
 
         for pair in self.POSE_PAIRS:
-            partA = pair[0]
-            partB = pair[1]
+            point = (points[pair[0]], points[pair[1]])
 
-            if points[partA] and points[partB]:
-                cv2.line(img, points[partA], points[partB], (255, 255, 255), thickness=80, lineType=cv2.FILLED)
+            if point[0] and point[1]:
+                cv2.line(img, point[0], point[1], (255, 255, 255), thickness=80, lineType=cv2.FILLED)
         
         if show:
             cv2.imshow('Output-Contour', img) 
