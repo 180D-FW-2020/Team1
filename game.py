@@ -826,10 +826,25 @@ class Game():
                     # _, _ = self.PoseEstimator.getContourFromPoints(self.pose)
                     # contour = cv2.imread('Output-Contour.jpg')
                     # contour = cv2.bitwise_not(contour)
+                    # while True:
+                    #     key = cv2.waitKey(1)
+                    #     _, frame = self.cap.read()
+                    #     # frame = cv2.addWeighted(frame,self.uservid_weight,contour,1,0)
+                    #     cv2.imshow(WINDOWNAME, frame)
+                    start_time = time.perf_counter()
                     while True:
-                        _, frame = self.cap.read()
-                        # frame = cv2.addWeighted(frame,self.uservid_weight,contour,1,0)
-                        cv2.imshow(WINDOWNAME, frame)
+                        time_elapsed = int(time.perf_counter() - start_time)
+                        time_remaining = 5 - time_elapsed
+                        if time_remaining <= 0: 
+                            cv2.imshow(WINDOWNAME, frame)
+                            self.send_my_pose = 0
+                            packet = {
+                                "username": ''.join(self.nickname),
+                                "score": 5
+                            }
+                            self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
+                            break
+
     def game(self):
         self.user_score = 0
         self.level_number = 0
