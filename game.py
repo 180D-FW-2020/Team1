@@ -781,8 +781,9 @@ class Game():
                     print(self.pose)
                     _, frame = self.cap.read()
                     contour, _ = self.PoseEstimator.getContourFromPoints(self.pose)
+                    contour = cv2.cvtColor(contour,cv2.COLOR_GRAY2RGB)
                     contour = cv2.bitwise_not(contour)
-                    # frame = cv2.addWeighted(frame,self.uservid_weight,contour,1,0)
+                    frame = cv2.addWeighted(frame,self.uservid_weight,contour,1,0)
                     print(contour.shape, frame.shape)
                     
                     cv2.imshow(WINDOWNAME, frame)
@@ -818,9 +819,9 @@ class Game():
                         self.pose[i] = tuple(self.pose[i])
                     _, frame = self.cap.read()
                     contour, _ = self.PoseEstimator.getContourFromPoints(self.pose)
+                    contour = cv2.cvtColor(contour,cv2.COLOR_GRAY2RGB)
                     contour = cv2.bitwise_not(contour)
-                    
-                    # frame = cv2.addWeighted(frame,self.uservid_weight,contour,1,0)
+                    frame = cv2.addWeighted(frame,self.uservid_weight,contour,1,0)
                     cv2.imshow(WINDOWNAME, frame)
     def game(self):
         self.user_score = 0

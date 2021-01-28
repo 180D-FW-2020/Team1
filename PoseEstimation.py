@@ -177,8 +177,9 @@ class PoseEstimation():
         if show:
             cv2.imshow('Output-Contour', img) 
             cv2.waitKey(0) 
+        img = np.float32(img)
         cv2.imwrite(output, img)
-
+        
         return img, points
         
 
