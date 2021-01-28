@@ -178,6 +178,7 @@ class Game():
         self.pose = [] # the pose we received from the pose leader 
         # self.my_state
         self.pose_leader = ''
+        self.round_scores = {} # creator keeps track of who has what scores 
     # start mqtt 
     def on_connect(self, client, userdata, flags, rc):
         print("Connection returned result: "+str(rc))
@@ -222,9 +223,6 @@ class Game():
         print(packet["username"])
         user = packet["username"]
 
-        if "round_over" in packet and self.creator == 1:
-            self.move_on = 1
-
         if "leader" in packet:
             if packet["leader"] == ''.join(self.nickname): ## I am the leader 
                 self.pose_leader = packet["leader"]
@@ -244,10 +242,17 @@ class Game():
             print(type(self.pose))
             print(packet["pose"])
             pass 
-        if "score" in packet:
+        if "score" in packet and self.creator == 1:
             print(packet["score"])
             # indicate next round
-            pass 
+            self.round_scores[packet["user"]] = packet["score"]
+            if len(self.round_scores) == self.num_users - 1:
+                ## round is over 
+                self.move_on = 1
+                """
+                implement csv logic here
+                """
+                self.round_scores = {}
         if "join" in packet and self.creator == 1: # assuming initial message sends score
             # implement some stuff creator has to do when new players join via mqtt 
             print(packet["join"])
@@ -791,26 +796,39 @@ class Game():
                 ## send message to person whose turn it is 
                 if self.move_on == 0 and self.users[cur_user] != ''.join(self.nickname):
                     self.show_screen('waiting_for_new_pose')
-                    # print(self.pose)
-                    for i in range(len(self.pose)):
-                        self.pose[i] = tuple(self.pose[i])
+                    start_time = time.perf_counter()
+                    while True:
+                        key = cv2.waitKey(1)
+                        _, frame = self.cap.read()
+                        time_elapsed = int(time.perf_counter() - start_time)
+                        time_remaining = 5 - time_elapsed
+                        cv2.imshow(WINDOWNAME, frame)
+                        if time_remaining <= 0: 
+                            cv2.imshow(WINDOWNAME, frame)
+                            packet = {
+                                "username": ''.join(self.nickname),
+                                "score": 5
+                            }
+                            self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
+                            break
                     continue
                 print(self.users[cur_user])
-                if self.users[cur_user] == ''.join(self.nickname):
+                elif self.move_on == 1:
+                    if self.users[cur_user] == ''.join(self.nickname):
                     # print('hello')
-                    self.send_my_pose = 1
-                    self.send_pose()
-                    while True:
-                        #wait for score
-                        self.show_screen('waiting_for_new_pose')
-                else:
-                    print('goodbye')
-                    packet = {
-                        "username": ''.join(self.nickname),
-                        "leader": self.users[cur_user]
-                    }
-                    self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
-                    self.move_on = 0
+                        self.send_my_pose = 1
+                        self.send_pose()
+                        while True:
+                            #wait for score
+                            self.show_screen('waiting_for_new_pose')
+                    else:
+                        print('goodbye')
+                        packet = {
+                            "username": ''.join(self.nickname),
+                            "leader": self.users[cur_user]
+                        }
+                        self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
+                        self.move_on = 0
                 
                 cur_user += 1
                 cur_user %= (self.num_users+1)
