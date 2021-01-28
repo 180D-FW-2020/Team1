@@ -245,7 +245,7 @@ class Game():
         if "score" in packet and self.creator == 1:
             print(packet["score"])
             # indicate next round
-            self.round_scores[packet["user"]] = packet["score"]
+            self.round_scores[packet["username"]] = packet["score"]
             if len(self.round_scores) == self.num_users - 1:
                 ## round is over 
                 self.move_on = 1
@@ -794,6 +794,7 @@ class Game():
             cur_user = 0
             while True:
                 ## send message to person whose turn it is 
+                print(self.users[cur_user])
                 if self.move_on == 0 and self.users[cur_user] != ''.join(self.nickname):
                     self.show_screen('waiting_for_new_pose')
                     start_time = time.perf_counter()
@@ -812,7 +813,6 @@ class Game():
                             self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
                             break
                     continue
-                print(self.users[cur_user])
                 elif self.move_on == 1:
                     if self.users[cur_user] == ''.join(self.nickname):
                     # print('hello')
