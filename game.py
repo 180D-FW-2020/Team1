@@ -782,7 +782,9 @@ class Game():
                     _, frame = self.cap.read()
                     contour, _ = self.PoseEstimator.getContourFromPoints(self.pose)
                     contour = cv2.bitwise_not(contour)
-                    frame = cv2.addWeighted(frame,self.uservid_weight,contour,1,0)
+                    # frame = cv2.addWeighted(frame,self.uservid_weight,contour,1,0)
+                    print(contour.shape, frame.shape)
+                    
                     cv2.imshow(WINDOWNAME, frame)
                     continue
                 print(self.users[cur_user])
@@ -817,7 +819,8 @@ class Game():
                     _, frame = self.cap.read()
                     contour, _ = self.PoseEstimator.getContourFromPoints(self.pose)
                     contour = cv2.bitwise_not(contour)
-                    frame = cv2.addWeighted(frame,self.uservid_weight,contour,1,0)
+                    
+                    # frame = cv2.addWeighted(frame,self.uservid_weight,contour,1,0)
                     cv2.imshow(WINDOWNAME, frame)
     def game(self):
         self.user_score = 0
@@ -842,25 +845,41 @@ class Game():
             exit(1)
 
     def test(self):
-        frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
-        example_arr = [None, (352, 296), (320, 296), None, None, (416, 160), (296, 112), (256, 120), (352, 120), None, None, (488, 168), None, None, (440, 160)]
-        output = contour_pictures[0]
-        count = 0 
-        for point in example_arr:
-            if point == None or point[0] > 480 or point[1] > 640:
-                continue
-                # cv2.circle(output, (point[0],point[1]), 8, (0, 255, 255), thickness=-1, lineType=cv2.FILLED)
-            if output[point[0],point[1],0] > 20 and output[point[0],point[1],1] > 20 and output[point[0],point[1],2] > 20:
-                count +=1
-        for point in example_arr:
-            if point != None:
-                cv2.circle(output, (point[0],point[1]), 8, (0, 255, 255), thickness=-1, lineType=cv2.FILLED)
-        print(count)
-        cv2.imshow('test',output)
-        while True:
-            if cv2.waitKey(0):
-                break
-
+        # frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
+        # example_arr = [None, (352, 296), (320, 296), None, None, (416, 160), (296, 112), (256, 120), (352, 120), None, None, (488, 168), None, None, (440, 160)]
+        # output = contour_pictures[0]
+        # count = 0 
+        # for point in example_arr:
+        #     if point == None or point[0] > 480 or point[1] > 640:
+        #         continue
+        #         # cv2.circle(output, (point[0],point[1]), 8, (0, 255, 255), thickness=-1, lineType=cv2.FILLED)
+        #     if output[point[0],point[1],0] > 20 and output[point[0],point[1],1] > 20 and output[point[0],point[1],2] > 20:
+        #         count +=1
+        # for point in example_arr:
+        #     if point != None:
+        #         cv2.circle(output, (point[0],point[1]), 8, (0, 255, 255), thickness=-1, lineType=cv2.FILLED)
+        # print(count)
+        # cv2.imshow('test',output)
+        # while True:
+        #     if cv2.waitKey(0):
+        #         break
+        # 
+        # 
+        # 
+        # 
+        
+        
+        
+        
+        # contour = cv2.imread('Output-Contour.jpg')
+        # contour = cv2.bitwise_not(contour)
+        # print(contour.shape)
+        # while True: 
+        #     _, frame = self.cap.read()
+        #     # print(frame.shape)
+        #     # frame = cv2.addWeighted(frame,self.uservid_weight,contour,1,0)
+        #     cv2.imshow(WINDOWNAME, frame)
+        pass 
     def __del__(self):
         cv2.destroyAllWindows()
         self.client_mqtt.loop_stop()
