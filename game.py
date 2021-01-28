@@ -145,6 +145,7 @@ class Game():
         self.bucket = None
         self.creator = 0 # 1 for creator, 0 for joiner 
         self.room_name = '' 
+        self.multi_start = 0
 
         # User variables
         self.user_score = 0
@@ -165,14 +166,9 @@ class Game():
             print('Unexpected Disconnect')
         else:
             print('Expected Disconnect')
-                
-    def on_message(self, client, userdata, message):
-        print('Received message: "' + str(message.payload) + '" on topic "' +
-        message.topic + '" with QoS ' + str(message.qos))
-        packet = json.loads(message.payload)
-        print(packet["username"])
-        print(packet["gesture"])
-        if packet["gesture"] == 'wave':
+
+    def on_gesture(self,gesture):
+        if gesture == 'wave':
             # add 1 to activate powerup count 
             if self.play == False:
                 return
@@ -180,7 +176,7 @@ class Game():
                 self.powerup_vals[power_up_file_names[0]] += 1
             else:
                 pass # try to add more points for the level 
-        elif packet["gesture"] == 'tap':
+        elif gesture == 'tap':
             # add 1 to help powerup count 
             if self.play == False:
                 return
@@ -188,7 +184,7 @@ class Game():
                 self.powerup_vals[power_up_file_names[1]] += 1
             else:
                 pass # try to add more points for the level 
-        elif packet["gesture"] == 'double_tap':
+        elif gesture == 'double_tap':
             # pause/un-pause
             if self.play:
                 self.play = False
@@ -197,6 +193,35 @@ class Game():
                 self.play = True
                 self.TIMER_THRESHOLD += int(time.perf_counter() - self.reset_timer)
                 self.reset_timer = -1
+
+    def on_message(self, client, userdata, message):
+        print('Received message: "' + str(message.payload) + '" on topic "' +
+        message.topic + '" with QoS ' + str(message.qos))
+        packet = json.loads(message.payload)
+        print(packet["username"])
+        user = packet["username"]
+        if "gesture" in packet:
+            print(packet["gesture"])
+            self.on_gesture(packet["gesture"])
+        if "pose" in packet:
+            print(packet["pose"])
+            pass 
+        if "score" in packet:
+            print(packet["score"])
+            pass 
+        if "join" in packet and self.creator == 1: # assuming initial message sends score
+            # implement some stuff creator has to do when new players join via mqtt 
+            print(packet["join"])
+            if packet["join"] == True:
+                # joining 
+                f = open("room_info.csv", "a")
+                f.write('{},{}\n'.format(user, packet["score"]))
+                f.close()
+                self.client_aws.upload_file('room_info.csv', self.room_name, "room_info.csv")
+            pass 
+        if "start_mult" in packet and self.creator == 0:
+            self.multi_start = 1
+        
     # end mqtt
     def createaws(self):
         valid = 0
@@ -209,30 +234,34 @@ class Game():
         if valid == 1:
             self.game()
         try:
-            # self.client.head_object(Bucket=self.bucket, Key='file.txt')
-            self.client_aws.download_file(self.room_name, 'room_info.csv', 'room_info.csv') 
+            self.client_aws.head_object(Bucket=self.room_name, Key='room_info.csv')
+        except ClientError as e:
+            #print('does not exist') ## you're the creator 
+            self.creator = 1 
             self.client_mqtt.subscribe(self.room_name, qos=1)
             packet = {
                 "username": ''.join(self.nickname),
-                "joining": True,
                 "score": 0 
             }
-            client.publish(self.room_name, json.dumps(packet), qos=1)
-
-
-
-            # check if room is being occupied 
-            # if not, then you're the creator 
-            #bucket name, remote file name, local file name
-            return
-        except: 
-            creator = 1
+            self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
+            print(self.room_name)
             f = open("room_info.csv", "w")
-            f.write('{},{}'.format(''.join(self.nickname),self.user_score))
+            f.write('{},{}\n'.format(''.join(self.nickname),self.user_score))
             f.close()
             self.client_aws.upload_file('room_info.csv', self.room_name, "room_info.csv")
             #local file name, bucket, remote file name
-        print(''.join(self.room))
+            return
+
+        # you're the joiner 
+        self.client_mqtt.subscribe(self.room_name, qos=1)
+        print(self.room_name)
+        packet = {
+            "username": ''.join(self.nickname),
+            "score": 0,
+            "join": True
+        }
+        self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
+
     
     def activate(self):
         if self.play == False:
@@ -338,7 +367,6 @@ class Game():
                     cv2.putText(frame, "Medium --- \'m\'", (175, 350), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.putText(frame, "Hard --- Enter", (175, 400), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.imshow(WINDOWNAME, frame)       
-
         elif screen_type == 'level':
             words = ['LEVEL ', '{}'.format(self.level_number)]        
             for word in words:
@@ -387,62 +415,33 @@ class Game():
             if DEBUG == 3:
                 return cv2.waitKey(0)
         elif screen_type == 'room':
-            cv2.putText(frame, "Create or Join a Room?",(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-            cv2.putText(frame, "Create --- Enter", (175, 300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-            cv2.putText(frame, "Join --- \'j\'", (175, 350), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-            cv2.putText(frame, "-->",(135,300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Enter a room code:",(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+            for i in range(len(self.room)):
+                cv2.putText(frame, self.room[i], (150+ 20*i,300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
+            num = 0
+
             while True:
                 key = cv2.waitKey(0)
                 if key == ESC_KEY:
                     self.__del__()
                     exit(0)
-                elif key == ENTER_KEY:
+                elif num >= len(self.room) and key == ENTER_KEY:
+                    return # go to aws creation
+                else:
+                    if num >= len(self.room):
+                        continue
+                    if key == BACK_KEY:
+                        self.room[num] = '*'
+                        if num > 0:
+                            num -= 1
+                    elif chr(key)!= '*':
+                        self.room[num] = chr(key)
+                        num += 1
                     frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
                     cv2.putText(frame, "Enter a room code:",(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
                     for i in range(len(self.room)):
-                        cv2.putText(frame, self.room[i], (130+ 20*i,300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-                    cv2.imshow(WINDOWNAME, frame)
-                    num = 0
-                    while True:
-                        key = cv2.waitKey(0)
-                        if key == ESC_KEY:
-                            self.__del__()
-                            exit(0)
-                        elif num >= len(self.room) and key == ENTER_KEY:
-                            return # go to aws creation
-                        else:
-                            if num >= len(self.room):
-                                continue
-                            if key == BACK_KEY:
-                                self.room[num] = '*'
-                                if num > 0:
-                                    num -= 1
-                            elif chr(key)!= '*':
-                                self.room[num] = chr(key)
-                                num += 1
-                            frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
-                            cv2.putText(frame, "Enter a room code:",(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-                            for i in range(len(self.room)):
-                                cv2.putText(frame, self.room[i], (115+ 20*i,300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-                            cv2.imshow(WINDOWNAME, frame)
-                    return
-                elif key == ord('j'):
-                    frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
-                    cv2.putText(frame, "Create or Join a Room?",(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-                    cv2.putText(frame, "Create --- Enter", (175, 300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-                    cv2.putText(frame, "Join --- \'j\'", (175, 350), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-                    cv2.putText(frame, "-->",(135,350), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-                    self.createorjoin = 1
-                    cv2.imshow(WINDOWNAME, frame)
-
-                elif key == ord('c'):
-                    frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
-                    cv2.putText(frame, "Create or Join a Room?",(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-                    cv2.putText(frame, "Create --- Enter", (175, 300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-                    cv2.putText(frame, "Join --- \'j\'", (175, 350), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-                    cv2.putText(frame, "-->",(135,300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-                    self.createorjoin = 0
+                        cv2.putText(frame, self.room[i], (115+ 20*i,300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.imshow(WINDOWNAME, frame)
         elif screen_type == 'nickname':
             cv2.putText(frame, "Nickname:",(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
@@ -514,7 +513,36 @@ class Game():
                         cv2.putText(frame, '*', (115+ 20*i,300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.imshow(WINDOWNAME, frame)
             return
-    
+
+        elif screen_type == 'start_game_multi':
+            cv2.putText(frame, "Press Enter to Start the Game".format(ROOM+''.join(self.room)),(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.imshow(WINDOWNAME, frame)
+            while True:
+                key = cv2.waitKey(0)
+                if key == ESC_KEY:
+                    self.__del__()
+                    exit(0)
+                elif key == ENTER_KEY:
+                    # send an update to everybody 
+                    # game start 
+                    packet = {
+                        "username": ''.join(self.nickname),
+                        "score": self.user_score,
+                        "start_mult": True
+                    }
+                    self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
+                    return
+        elif screen_type == 'waiting_for_creator':
+            cv2.putText(frame, "Please wait for creator to start the game".format(ROOM+''.join(self.room)),(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.imshow(WINDOWNAME, frame)
+            while True:
+                key = cv2.waitKey(10)
+                if key == ESC_KEY:
+                    self.__del__()
+                    exit(0)
+                if self.multi_start == 1:
+                    return
+                pass
 
     def editFrame(self, frame, start_time, contour, override_time = False):
         original = np.copy(frame)
@@ -661,14 +689,18 @@ class Game():
             if self.TIMER_THRESHOLD > 5:
                 self.TIMER_THRESHOLD -= 2
 
-
     def multiplayer(self):
         self.show_screen('room')
         self.show_screen('nickname') 
         self.room_name = ROOM + ''.join(self.room)
         print(self.room_name)
         self.createaws()
-        
+        if self.creator == 1:
+            self.show_screen('start_game_multi') 
+            time.sleep(3)
+        else: 
+            self.show_screen('waiting_for_creator')
+
     def game(self):
         self.user_score = 0
         self.level_number = 0
