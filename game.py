@@ -165,7 +165,9 @@ class Game():
 
         # multi user variables
         self.send_my_pose = 0
-        
+        self.move_on = 0
+        self.pose_updated = 0
+        self.pose = []
     # start mqtt 
     def on_connect(self, client, userdata, flags, rc):
         print("Connection returned result: "+str(rc))
@@ -212,10 +214,14 @@ class Game():
         if "turn" in packet and packet["turn"] == ''.join(self.nickname):
             self.send_my_pose = 1
             return 
+        if "turn_over" in packet and self.creator == 1:
+            self.move_on = 1
+
         if "gesture" in packet:
             print(packet["gesture"])
             self.on_gesture(packet["gesture"])
         if "pose" in packet:
+            self.pose_updated
             print(packet["pose"])
             pass 
         if "score" in packet:
@@ -254,7 +260,7 @@ class Game():
         except ClientError as e:
             #print('does not exist') ## you're the creator 
             self.creator = 1 
-            self.users[1] = self.nickname
+            self.users[1] = ''.join(self.nickname)
             self.client_mqtt.subscribe(self.room_name, qos=1)
             packet = {
                 "username": ''.join(self.nickname),
@@ -560,7 +566,18 @@ class Game():
                 if self.multi_start == 1:
                     return
                 pass
-
+        elif screen_type == 'waiting_for_new_pose':
+            cv2.putText(frame, "Please wait for user ___ to create a pose".format(ROOM+''.join(self.room)),(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.imshow(WINDOWNAME, frame)
+            while True:
+                key = cv2.waitKey(10)
+                if key == ESC_KEY:
+                    self.__del__()
+                    exit(0)
+                if self.pose_updated == 1:
+                    print('we made it')
+                    exit(1)
+                pass    
     def editFrame(self, frame, start_time, contour, override_time = False):
         original = np.copy(frame)
         time_elapsed = int(time.perf_counter()-start_time)
@@ -707,17 +724,23 @@ class Game():
                 self.TIMER_THRESHOLD -= 2
     def send_pose(self):
         ## include screen to say "you're up"
-        cur_time = time.perf_counter()
+        start_time = time.perf_counter()
         while self.send_my_pose == 1: 
+            key = cv2.waitKey(1)
             _, frame = self.cap.read()
             # frame, time_remaining, original = self.editFrame(frame, start_time, contour, override_time=override_time)
             cv2.imshow(WINDOWNAME, frame)
-            time_elapsed = int(time.perf_counter()-start_time)
-            time_remaining = self.TIMER_THRESHOLD - time_elapsed
+            time_elapsed = int(time.perf_counter() - start_time)
+            time_remaining = 5 - time_elapsed
             if time_remaining <= 0: 
-                self.TIMER_THRESHOLD = timer_old
                 cv2.imshow(WINDOWNAME, frame)
                 self.send_my_pose = 0
+                packet = {
+                    "username": ''.join(self.nickname),
+                    "turn_over": 1
+                }
+                self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
+                return
         pass 
 
 
@@ -733,28 +756,36 @@ class Game():
             cur_user = 1
             while True:
                 ## send message to person whose turn it is 
+                print(self.users[cur_user])
+                if self.move_on == 0:
+                    continue
+                
                 if self.users[cur_user] == ''.join(self.nickname):
+                    print('hello')
                     self.send_my_pose = 1
                     self.send_pose()
                     
+                    
                 else:
+                    print('goodbye')
                     packet = {
                         "username": ''.join(self.nickname),
                         "turn": self.users[cur_user]
                     }
                     self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
-                
-                
-                
+                    self.move_on = 0
                 
                 cur_user += 1
-                cur_user = cur_user % self.num_users
+                if cur_user == 5:
+                    cur_user = 1
                 
         else: 
             self.show_screen('waiting_for_creator')
             while True:
                 if self.send_my_pose == 1:
                     self.send_pose()
+                else:
+                    self.show_screen('waiting_for_new_pose')
 
     def game(self):
         self.user_score = 0
