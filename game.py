@@ -24,6 +24,8 @@ from botocore.client import ClientError
 region='us-east-1'
 ROOM = 'ece180d-team1-room-'
 
+test_points = [(304, 88), (304, 136), (272, 160), (272, 216), (504, 152), (328, 152), (328, 232), (336, 264), (480, 192), (280, 368), (288, 416), (496, 192), (320, 368), (320, 416), (420, 420)]
+
 FONTCOLOR = (255,255,255)
 FONT = cv2.FONT_HERSHEY_SIMPLEX
 FONTSIZE = 1
