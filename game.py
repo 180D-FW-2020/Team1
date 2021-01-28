@@ -755,11 +755,12 @@ class Game():
         if self.creator == 1:
             self.show_screen('start_game_multi') 
             # time.sleep(3)
-            cur_user = 1
+            cur_user = 0
             while True:
                 ## send message to person whose turn it is 
                 
-                if self.move_on == 0:
+                if self.move_on == 0 and self.users[cur_user] != ''.join(self.nickname):
+                    self.show_screen('waiting_for_new_pose')
                     continue
                 print(self.users[cur_user])
                 if self.users[cur_user] == ''.join(self.nickname):
@@ -778,8 +779,8 @@ class Game():
                     self.move_on = 0
                 
                 cur_user += 1
-                cur_user %= self.num_users
-                
+                cur_user %= (self.num_users+1)
+
         else: 
             self.show_screen('waiting_for_creator')
             while True:
@@ -787,6 +788,7 @@ class Game():
                     self.send_pose()
                 else:
                     self.show_screen('waiting_for_new_pose')
+                    # we got a new pose 
 
     def game(self):
         self.user_score = 0
