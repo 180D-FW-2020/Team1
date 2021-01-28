@@ -833,6 +833,8 @@ class Game():
                     #     cv2.imshow(WINDOWNAME, frame)
                     start_time = time.perf_counter()
                     while True:
+                        key = cv2.waitKey(1)
+                        _, frame = self.cap.read()
                         time_elapsed = int(time.perf_counter() - start_time)
                         time_remaining = 5 - time_elapsed
                         if time_remaining <= 0: 
