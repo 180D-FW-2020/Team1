@@ -775,12 +775,15 @@ class Game():
                 
                 if self.move_on == 0 and self.users[cur_user] != ''.join(self.nickname):
                     self.show_screen('waiting_for_new_pose')
-                    for i in self.pose:
-                        i = tuple(i)
-
+                    print(self.pose)
+                    for i in range(len(self.pose)):
+                        self.pose[i] = tuple(self.pose[i])
+                    print(self.pose)
+                    _, frame = self.cap.read()
                     contour, _ = self.PoseEstimator.getContourFromPoints(self.pose)
                     contour = cv2.bitwise_not(contour)
                     frame = cv2.addWeighted(frame,self.uservid_weight,contour,1,0)
+                    cv2.imshow(WINDOWNAME, frame)
                     continue
                 print(self.users[cur_user])
                 if self.users[cur_user] == ''.join(self.nickname):
@@ -809,11 +812,13 @@ class Game():
                 else:
                     self.show_screen('waiting_for_new_pose')
                     # we got a new pose 
-                    for i in self.pose:
-                        i = tuple(i)
+                    for i in range(len(self.pose)):
+                        self.pose[i] = tuple(self.pose[i])
+                    _, frame = self.cap.read()
                     contour, _ = self.PoseEstimator.getContourFromPoints(self.pose)
                     contour = cv2.bitwise_not(contour)
                     frame = cv2.addWeighted(frame,self.uservid_weight,contour,1,0)
+                    cv2.imshow(WINDOWNAME, frame)
     def game(self):
         self.user_score = 0
         self.level_number = 0
