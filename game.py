@@ -123,7 +123,7 @@ class Game():
         self.client_mqtt.connect_async('broker.hivemq.com') # 2. connect to a broker using one of the connect*() functions.
         self.client_mqtt.loop_start() # 3. call one of the loop*() functions to maintain network traffic flow with the broker.
         self.users = {}
-        self.num_users = 1
+        self.num_users = 0
 
         # powerups
         self.powerup_vals = {} 
@@ -260,7 +260,7 @@ class Game():
         except ClientError as e:
             #print('does not exist') ## you're the creator 
             self.creator = 1 
-            self.users[1] = ''.join(self.nickname)
+            self.users[self.num_users] = ''.join(self.nickname)
             self.client_mqtt.subscribe(self.room_name, qos=1)
             packet = {
                 "username": ''.join(self.nickname),
@@ -575,7 +575,7 @@ class Game():
                     self.__del__()
                     exit(0)
                 if self.pose_updated == 1:
-                    print('we made it')
+                    # print('we made it')
                     return
                 pass    
     def editFrame(self, frame, start_time, contour, override_time = False):
@@ -778,8 +778,7 @@ class Game():
                     self.move_on = 0
                 
                 cur_user += 1
-                if cur_user == 5:
-                    cur_user = 1
+                cur_user %= self.num_users
                 
         else: 
             self.show_screen('waiting_for_creator')
