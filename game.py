@@ -51,6 +51,14 @@ ZERO_KEY = 48
 ONE_KEY = 49
 BACK_KEY = 8
 
+STATE_WAITING_FOR_CREATOR = 0
+STATE_WAITING_FOR_POSE_RECEIPT = 1
+STATE_GOT_POSE = 2
+STATE_MY_TURN = 3
+
+
+
+
 # WINDOW Definition 
 WINDOWNAME = 'Hole in the Wall!'
 cv2.namedWindow(WINDOWNAME, cv2.WND_PROP_FULLSCREEN)
@@ -168,6 +176,8 @@ class Game():
         self.move_on = 1
         self.pose_updated = 0
         self.pose = []
+        self.my_state
+
     # start mqtt 
     def on_connect(self, client, userdata, flags, rc):
         print("Connection returned result: "+str(rc))
@@ -211,20 +221,21 @@ class Game():
         packet = json.loads(message.payload)
         print(packet["username"])
         user = packet["username"]
-        if "turn" in packet and packet["turn"] == ''.join(self.nickname):
+        if "record_my_pose" in packet and packet["record_my_pose"] == ''.join(self.nickname):
             self.send_my_pose = 1
             return 
-        if "turn_over" in packet and self.creator == 1:
+
+        if "round_over" in packet and self.creator == 1:
             self.move_on = 1
 
         if "gesture" in packet:
             print(packet["gesture"])
             self.on_gesture(packet["gesture"])
-        if "pose" in packet:
+        if "send_my_pose" in packet:
             self.pose_updated = 1
-            self.pose = packet["pose"]
+            self.pose = packet["send_my_pose"]
             print(type(self.pose))
-            print(packet["pose"])
+            print(packet["send_my_pose"])
             pass 
         if "score" in packet:
             print(packet["score"])
@@ -759,7 +770,6 @@ class Game():
                 return
         pass 
 
-
     def multiplayer(self):
         self.show_screen('room')
         self.show_screen('nickname') 
@@ -772,29 +782,20 @@ class Game():
             cur_user = 0
             while True:
                 ## send message to person whose turn it is 
-                
                 if self.move_on == 0 and self.users[cur_user] != ''.join(self.nickname):
                     self.show_screen('waiting_for_new_pose')
-                    print(self.pose)
+                    # print(self.pose)
                     for i in range(len(self.pose)):
                         self.pose[i] = tuple(self.pose[i])
-                    print(self.pose)
-                    _, frame = self.cap.read()
-                    _, _ = self.PoseEstimator.getContourFromPoints(self.pose)
-                    contour = cv2.imread('Output-Contour.jpg')
-                    contour = cv2.bitwise_not(contour)
-                    frame = cv2.addWeighted(frame,self.uservid_weight,contour,1,0)
-                    print(contour.shape, frame.shape)
-                    
-                    cv2.imshow(WINDOWNAME, frame)
                     continue
                 print(self.users[cur_user])
                 if self.users[cur_user] == ''.join(self.nickname):
                     print('hello')
                     self.send_my_pose = 1
                     self.send_pose()
-                    
-                    
+                    while True:
+                        #wait for score
+                        self.show_screen('waiting_for_new_pose')
                 else:
                     print('goodbye')
                     packet = {
@@ -806,8 +807,7 @@ class Game():
                 
                 cur_user += 1
                 cur_user %= (self.num_users+1)
-
-        else: 
+        else: # regular user 
             self.show_screen('waiting_for_creator')
             while True:
                 if self.send_my_pose == 1:
@@ -815,14 +815,15 @@ class Game():
                 else:
                     self.show_screen('waiting_for_new_pose')
                     # we got a new pose 
-                    for i in range(len(self.pose)):
-                        self.pose[i] = tuple(self.pose[i])
-                    _, frame = self.cap.read()
-                    _, _ = self.PoseEstimator.getContourFromPoints(self.pose)
-                    contour = cv2.imread('Output-Contour.jpg')
-                    contour = cv2.bitwise_not(contour)
-                    frame = cv2.addWeighted(frame,self.uservid_weight,contour,1,0)
-                    cv2.imshow(WINDOWNAME, frame)
+                    # for i in range(len(self.pose)):
+                    #     self.pose[i] = tuple(self.pose[i])
+                    # _, _ = self.PoseEstimator.getContourFromPoints(self.pose)
+                    # contour = cv2.imread('Output-Contour.jpg')
+                    # contour = cv2.bitwise_not(contour)
+                    while True:
+                        _, frame = self.cap.read()
+                        # frame = cv2.addWeighted(frame,self.uservid_weight,contour,1,0)
+                        cv2.imshow(WINDOWNAME, frame)
     def game(self):
         self.user_score = 0
         self.level_number = 0
