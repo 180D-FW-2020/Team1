@@ -222,6 +222,8 @@ class Game():
             self.on_gesture(packet["gesture"])
         if "pose" in packet:
             self.pose_updated = 1
+            self.pose = packet["pose"]
+            print(type(self.pose))
             print(packet["pose"])
             pass 
         if "score" in packet:
@@ -623,6 +625,18 @@ class Game():
         cv2.putText(frame, "Score: {}".format(self.user_score), (500, 50), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
         # print('time remaining', time_remaining)
         return frame, time_remaining, original
+    
+    # def editFrame_Multi(self, frame, contour, override_time = False):
+    #     original = np.copy(frame)
+        
+    #     frame = cv2.addWeighted(frame,self.uservid_weight,contour,contour_weight,0)
+    #     num = 1
+
+        
+    #     cv2.putText(frame, "Time Remaining: {}".format(time_remaining), (10, 50), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+    #     cv2.putText(frame, "Score: {}".format(self.user_score), (500, 50), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+    #     # print('time remaining', time_remaining)
+    #     return frame, time_remaining, original
 
     def level(self):
         self.play = True
@@ -761,6 +775,9 @@ class Game():
                 
                 if self.move_on == 0 and self.users[cur_user] != ''.join(self.nickname):
                     self.show_screen('waiting_for_new_pose')
+                    contour, _ = self.PoseEstimator.getContourFromPoints(self.pose)
+                    contour = cv2.bitwise_not(contour)
+                    frame = cv2.addWeighted(frame,self.uservid_weight,contour,1,0)
                     continue
                 print(self.users[cur_user])
                 if self.users[cur_user] == ''.join(self.nickname):
@@ -789,7 +806,9 @@ class Game():
                 else:
                     self.show_screen('waiting_for_new_pose')
                     # we got a new pose 
-
+                    contour, _ = self.PoseEstimator.getContourFromPoints(self.pose)
+                    contour = cv2.bitwise_not(contour)
+                    frame = cv2.addWeighted(frame,self.uservid_weight,contour,1,0)
     def game(self):
         self.user_score = 0
         self.level_number = 0
