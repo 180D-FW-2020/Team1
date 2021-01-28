@@ -17,6 +17,7 @@ import json
 import boto3
 from botocore.config import Config
 from botocore.client import ClientError
+import key
 
 # OUTPUT = '.\output\\'
 # if os.path.isdir(OUTPUT) == False:
@@ -28,7 +29,8 @@ FONTCOLOR = (255,255,255)
 FONT = cv2.FONT_HERSHEY_SIMPLEX
 FONTSIZE = 1
 
-# mfile = open("file.txt", "a")
+ACCESS_KEY = key.ACCESS_KEY
+SECRET_KEY = key.SECRET_KEY
 # mfile.write("Hello World!")
 # mfile.close()
 
