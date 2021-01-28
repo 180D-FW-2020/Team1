@@ -221,7 +221,7 @@ class Game():
             print(packet["gesture"])
             self.on_gesture(packet["gesture"])
         if "pose" in packet:
-            self.pose_updated
+            self.pose_updated = 1
             print(packet["pose"])
             pass 
         if "score" in packet:
