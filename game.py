@@ -576,7 +576,7 @@ class Game():
                     exit(0)
                 if self.pose_updated == 1:
                     print('we made it')
-                    exit(1)
+                    return
                 pass    
     def editFrame(self, frame, start_time, contour, override_time = False):
         original = np.copy(frame)
@@ -738,7 +738,8 @@ class Game():
                 self.send_my_pose = 0
                 packet = {
                     "username": ''.join(self.nickname),
-                    "turn_over": 1
+                    "turn_over": 1,
+                    "pose": test_points
                 }
                 self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
                 return
@@ -757,10 +758,10 @@ class Game():
             cur_user = 1
             while True:
                 ## send message to person whose turn it is 
-                print(self.users[cur_user])
+                
                 if self.move_on == 0:
                     continue
-                
+                print(self.users[cur_user])
                 if self.users[cur_user] == ''.join(self.nickname):
                     print('hello')
                     self.send_my_pose = 1
