@@ -296,8 +296,7 @@ class Game():
             self.users[self.num_users] = ''.join(self.nickname)
             self.client_mqtt.subscribe(self.room_name, qos=1)
             packet = {
-                "username": ''.join(self.nickname),
-                "score": 0 
+                "username": ''.join(self.nickname)
             }
             self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
             print(self.room_name)
@@ -312,8 +311,7 @@ class Game():
         self.client_mqtt.subscribe(self.room_name, qos=1)
         print(self.room_name)
         packet = {
-            "username": ''.join(self.nickname),
-            "score": 0,
+            "username": ''.join(self.nickname)
             "join": True
         }
         self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
@@ -582,8 +580,7 @@ class Game():
                     # send an update to everybody 
                     # game start 
                     packet = {
-                        "username": ''.join(self.nickname),
-                        "score": self.user_score,
+                        "username": ''.join(self.nickname)
                         "start_mult": True
                     }
                     self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
