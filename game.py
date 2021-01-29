@@ -238,7 +238,7 @@ class Game():
         if "gesture" in packet:
             print(packet["gesture"])
             self.on_gesture(packet["gesture"])
-        if "send_my_pose" in packet:
+        if "send_my_pose" in packet and user != ''.join(self.nickname):
             self.pose_updated = 1
             self.pose = packet["pose"]
             print(type(self.pose))
