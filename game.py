@@ -175,6 +175,7 @@ class Game():
         self.send_my_pose = 0 #1 means I'm the pose leader --> local user makes a pose
         self.move_on = 1 #1 means round is over, creator chooses next pose leader --> CREATOR only 
         self.pose_updated = 0 #1 means pose leader sent pose over mqtt --> ALL users should fit in hole 
+        self.waiting_for_others = 0 #1 means that we (local user is pose leader) have sent our pose across and are waiting for others to finish fitting inside the hole 
         self.pose = [] # the pose we received from the pose leader 
         # self.my_state
         self.pose_leader = ''
@@ -232,7 +233,8 @@ class Game():
                 self.pose_updated = 0 
                 self.move_on = 0
                 self.send_my_pose = 0 
-         
+        if "round_over" in packet: # creator sends this across when the round is over --> don't keep waiting for others now
+            self.waiting_for_others = 0
         if "gesture" in packet:
             print(packet["gesture"])
             self.on_gesture(packet["gesture"])
@@ -252,6 +254,7 @@ class Game():
                 """
                 implement csv logic here
                 """
+
                 self.round_scores = {}
         if "join" in packet and self.creator == 1: # assuming initial message sends score
             # implement some stuff creator has to do when new players join via mqtt 
@@ -603,6 +606,17 @@ class Game():
                 if self.pose_updated == 1: #local user tries to fit in the hole now
                     return
                 pass    
+        elif screen_type == 'waiting_for_new_pose':
+            cv2.putText(frame, "Waiting for other users to pose",(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.imshow(WINDOWNAME, frame)
+            while True: #while in this loop, we're waiting for pose leader 
+                key = cv2.waitKey(10)
+                if key == ESC_KEY:
+                    self.__del__()
+                    exit(0)
+                if self.waiting_for_others == 0: #we're no longer waiting --> signify end of turn
+                    return
+                pass    
     def editFrame(self, frame, start_time, contour, override_time = False):
         original = np.copy(frame)
         time_elapsed = int(time.perf_counter()-start_time)
@@ -649,18 +663,6 @@ class Game():
         # print('time remaining', time_remaining)
         return frame, time_remaining, original
     
-    # def editFrame_Multi(self, frame, contour, override_time = False):
-    #     original = np.copy(frame)
-        
-    #     frame = cv2.addWeighted(frame,self.uservid_weight,contour,contour_weight,0)
-    #     num = 1
-
-        
-    #     cv2.putText(frame, "Time Remaining: {}".format(time_remaining), (10, 50), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-    #     cv2.putText(frame, "Score: {}".format(self.user_score), (500, 50), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-    #     # print('time remaining', time_remaining)
-    #     return frame, time_remaining, original
-
     def level(self):
         self.play = True
         timer_old = self.TIMER_THRESHOLD
@@ -781,6 +783,83 @@ class Game():
                 self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
                 return
         pass 
+    def creator(self):
+        self.show_screen('start_game_multi') 
+        # time.sleep(3)
+        cur_user = 0
+        while True:
+            ## send message to person whose turn it is 
+            print(self.users[cur_user])
+            if self.move_on == 0 and self.users[cur_user] != ''.join(self.nickname):
+                self.show_screen('waiting_for_new_pose')
+                start_time = time.perf_counter()
+                while True:
+                    key = cv2.waitKey(1)
+                    _, frame = self.cap.read()
+                    time_elapsed = int(time.perf_counter() - start_time)
+                    time_remaining = 5 - time_elapsed
+                    cv2.imshow(WINDOWNAME, frame)
+                    if time_remaining <= 0: 
+                        cv2.imshow(WINDOWNAME, frame)
+                        packet = {
+                            "username": ''.join(self.nickname),
+                            "score": 5
+                        }
+                        self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
+                        break
+                continue
+            elif self.move_on == 1:
+                if self.users[cur_user] == ''.join(self.nickname):
+                # print('hello')
+                    self.send_my_pose = 1
+                    self.send_pose()
+                    while True:
+                        #wait for score
+                        self.show_screen('waiting_for_new_pose')
+                else:
+                    print('goodbye')
+                    packet = {
+                        "username": ''.join(self.nickname),
+                        "leader": self.users[cur_user]
+                    }
+                    self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
+                    self.move_on = 0
+            
+            cur_user += 1
+            cur_user %= (self.num_users+1)
+    def joiner(self):
+        self.show_screen('waiting_for_creator')
+        while True:
+            if self.send_my_pose == 1:
+                self.send_pose()
+            else:
+                self.show_screen('waiting_for_new_pose')
+                # we got a new pose 
+                # for i in range(len(self.pose)):
+                #     self.pose[i] = tuple(self.pose[i])
+                # _, _ = self.PoseEstimator.getContourFromPoints(self.pose)
+                # contour = cv2.imread('Output-Contour.jpg')
+                # contour = cv2.bitwise_not(contour)
+                # while True:
+                #     key = cv2.waitKey(1)
+                #     _, frame = self.cap.read()
+                #     # frame = cv2.addWeighted(frame,self.uservid_weight,contour,1,0)
+                #     cv2.imshow(WINDOWNAME, frame)
+                start_time = time.perf_counter()
+                while True:
+                    key = cv2.waitKey(1)
+                    _, frame = self.cap.read()
+                    time_elapsed = int(time.perf_counter() - start_time)
+                    time_remaining = 5 - time_elapsed
+                    cv2.imshow(WINDOWNAME, frame)
+                    if time_remaining <= 0: 
+                        cv2.imshow(WINDOWNAME, frame)
+                        packet = {
+                            "username": ''.join(self.nickname),
+                            "score": 5
+                        }
+                        self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
+                        break
 
     def multiplayer(self):
         self.show_screen('room')
@@ -789,82 +868,9 @@ class Game():
         print(self.room_name)
         self.createaws()
         if self.creator == 1:
-            self.show_screen('start_game_multi') 
-            # time.sleep(3)
-            cur_user = 0
-            while True:
-                ## send message to person whose turn it is 
-                print(self.users[cur_user])
-                if self.move_on == 0 and self.users[cur_user] != ''.join(self.nickname):
-                    self.show_screen('waiting_for_new_pose')
-                    start_time = time.perf_counter()
-                    while True:
-                        key = cv2.waitKey(1)
-                        _, frame = self.cap.read()
-                        time_elapsed = int(time.perf_counter() - start_time)
-                        time_remaining = 5 - time_elapsed
-                        cv2.imshow(WINDOWNAME, frame)
-                        if time_remaining <= 0: 
-                            cv2.imshow(WINDOWNAME, frame)
-                            packet = {
-                                "username": ''.join(self.nickname),
-                                "score": 5
-                            }
-                            self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
-                            break
-                    continue
-                elif self.move_on == 1:
-                    if self.users[cur_user] == ''.join(self.nickname):
-                    # print('hello')
-                        self.send_my_pose = 1
-                        self.send_pose()
-                        while True:
-                            #wait for score
-                            self.show_screen('waiting_for_new_pose')
-                    else:
-                        print('goodbye')
-                        packet = {
-                            "username": ''.join(self.nickname),
-                            "leader": self.users[cur_user]
-                        }
-                        self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
-                        self.move_on = 0
-                
-                cur_user += 1
-                cur_user %= (self.num_users+1)
+            self.creator()
         else: # regular user 
-            self.show_screen('waiting_for_creator')
-            while True:
-                if self.send_my_pose == 1:
-                    self.send_pose()
-                else:
-                    self.show_screen('waiting_for_new_pose')
-                    # we got a new pose 
-                    # for i in range(len(self.pose)):
-                    #     self.pose[i] = tuple(self.pose[i])
-                    # _, _ = self.PoseEstimator.getContourFromPoints(self.pose)
-                    # contour = cv2.imread('Output-Contour.jpg')
-                    # contour = cv2.bitwise_not(contour)
-                    # while True:
-                    #     key = cv2.waitKey(1)
-                    #     _, frame = self.cap.read()
-                    #     # frame = cv2.addWeighted(frame,self.uservid_weight,contour,1,0)
-                    #     cv2.imshow(WINDOWNAME, frame)
-                    start_time = time.perf_counter()
-                    while True:
-                        key = cv2.waitKey(1)
-                        _, frame = self.cap.read()
-                        time_elapsed = int(time.perf_counter() - start_time)
-                        time_remaining = 5 - time_elapsed
-                        cv2.imshow(WINDOWNAME, frame)
-                        if time_remaining <= 0: 
-                            cv2.imshow(WINDOWNAME, frame)
-                            packet = {
-                                "username": ''.join(self.nickname),
-                                "score": 5
-                            }
-                            self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
-                            break
+            self.joiner()
 
     def game(self):
         self.user_score = 0
