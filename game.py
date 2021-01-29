@@ -221,7 +221,7 @@ class Game():
         print('Received message: "' + str(message.payload) + '" on topic "' +
         message.topic + '" with QoS ' + str(message.qos))
         packet = json.loads(message.payload)
-        print(packet["username"])
+        # print(packet["username"])
         user = packet["username"]
 
         if "leader" in packet:
@@ -245,24 +245,24 @@ class Game():
             print(packet["pose"])
             pass 
         if "score" in packet and self.creator == 1:
-            print(packet["score"])
+            # print(packet["score"])
             # indicate next round
             self.round_scores[packet["username"]] = packet["score"]
-            if len(self.round_scores) == self.num_users - 1:
+            if len(self.round_scores) == self.num_users:
                 ## round is over 
                 self.move_on = 1
                 """
                 implement csv logic here
                 """
                 packet = {
-                        "username": ''.join(self.nickname),
-                        "round_over": 1
-                    }
+                    "username": ''.join(self.nickname),
+                    "round_over": 1
+                }
                 self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
                 self.round_scores = {}
         if "join" in packet and self.creator == 1: # assuming initial message sends score
             # implement some stuff creator has to do when new players join via mqtt 
-            print(packet["join"])
+            # print(packet["join"])
             if packet["join"] == True:
                 # joining 
                 # if self.num_users == 4:
@@ -282,7 +282,7 @@ class Game():
         valid = 0
         try:
             self.bucket = self.client_aws.create_bucket(Bucket= self.room_name)
-            print(self.bucket)
+            # print(self.bucket)
         except:
             self.show_screen('could_not_create')
             valid = 1
@@ -683,7 +683,7 @@ class Game():
         frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
         self.show_screen('level')
         start_time = time.perf_counter()
-        print(start_time)
+        # print(start_time)
         override_time=False
         stop = False
         while True:
@@ -738,8 +738,8 @@ class Game():
                 while True:
                     if cv2.waitKey(100):
                         break
-                print('original shape', original.shape)
-                print(contour.shape)
+                # print('original shape', original.shape)
+                # print(contour.shape)
                 frame, points = self.PoseEstimator.getPoints(original)
                 level_score = self.PoseDetector.isWithinContour(points, contour)
                 if DEBUG == 2:
@@ -793,7 +793,7 @@ class Game():
         cur_user = 0
         while True:
             ## send message to person whose turn it is 
-            print(self.users[cur_user])
+            print('it\'s {}\'s turn'.format(self.users[cur_user]))
             if self.move_on == 0 and self.users[cur_user] != ''.join(self.nickname):
                 self.show_screen('waiting_for_new_pose')
                 start_time = time.perf_counter()
