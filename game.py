@@ -177,6 +177,7 @@ class Game():
         self.pose_updated = 0 #1 means pose leader sent pose over mqtt --> ALL users should fit in hole 
         self.waiting_for_others = 0 #1 means that we (local user is pose leader) have sent our pose across and are waiting for others to finish fitting inside the hole 
         self.pose = [] # the pose we received from the pose leader 
+        self.next_leader = 0 #1 means next leader has been chosen, move on to pose stuff
         # self.my_state
         self.pose_leader = ''
         self.round_scores = {} # creator keeps track of who has what scores 
@@ -225,11 +226,11 @@ class Game():
         user = packet["username"]
 
         if "leader" in packet:
+            self.next_leader = 1
+            self.pose_leader = packet["leader"]
             if packet["leader"] == ''.join(self.nickname): ## I am the leader 
-                self.pose_leader = packet["leader"]
                 self.send_my_pose = 1
             else: ## ___ is the leader 
-                self.pose_leader = packet["leader"]
                 self.pose_updated = 0 
                 self.move_on = 0
                 self.send_my_pose = 0 
@@ -596,6 +597,22 @@ class Game():
                     return
                 pass
         elif screen_type == 'waiting_for_new_pose':
+            cv2.putText(frame, "Please wait for 2 seconds",(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.imshow(WINDOWNAME, frame)
+            start_time = time.perf_counter()
+            while True: #while in this loop, we're waiting for pose leader 
+                key = cv2.waitKey(10)
+                if key == ESC_KEY:
+                    self.__del__()
+                    exit(0)
+                time_elapsed = int(time.perf_counter() - start_time)
+                time_remaining = 2 - time_elapsed
+                cv2.imshow(WINDOWNAME, frame)
+                if time_remaining <= 0: 
+                    break
+                
+            frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
+            txt = ''
             cv2.putText(frame, "Please wait for user {} to create a pose".format(self.pose_leader),(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             while True: #while in this loop, we're waiting for pose leader 
@@ -627,6 +644,17 @@ class Game():
                     self.show_screen('waiting_for_others_pose')
                     return
                 pass    
+        elif screen_type == 'level_end_multi':
+            cv2.putText(frame,'Your score is {}'.format(5), (140, 220), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.imshow(WINDOWNAME, frame)
+            while True:
+                key = cv2.waitKey(10)
+                if key == ESC_KEY:
+                    self.__del__()
+                    exit(0)
+                if self.next_leader == 1:
+                    self.next_leader = 0
+                    return
         elif screen_type == 'waiting_for_others_pose':
             cv2.putText(frame, "Waiting for other users to match your pose",(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
@@ -812,6 +840,8 @@ class Game():
             ## send message to person whose turn it is 
             if self.move_on == 0 and self.users[cur_user] != ''.join(self.nickname):
                 self.show_screen('waiting_for_new_pose')
+                self.show_screen('level_end_multi')
+            
             elif self.move_on == 1:
                 if self.users[cur_user] == ''.join(self.nickname):
                     print('it\'s {}\'s turn'.format(self.users[cur_user]))
@@ -834,6 +864,7 @@ class Game():
         self.show_screen('waiting_for_creator')
         while True:
             self.show_screen('waiting_for_new_pose')
+            self.show_screen('level_end_multi')
             # we got a new pose 
             # for i in range(len(self.pose)):
             #     self.pose[i] = tuple(self.pose[i])
