@@ -268,7 +268,7 @@ class Game():
                 # if self.num_users == 4:
                 #     pass # don't let them join, implement later 
                 f = open("room_info.csv", "a")
-                f.write('{},{}\n'.format(user, packet["score"]))
+                f.write('{},{}\n'.format(user, 0))
                 f.close()
                 self.client_aws.upload_file('room_info.csv', self.room_name, "room_info.csv")
                 self.num_users += 1
@@ -311,7 +311,7 @@ class Game():
         self.client_mqtt.subscribe(self.room_name, qos=1)
         print(self.room_name)
         packet = {
-            "username": ''.join(self.nickname)
+            "username": ''.join(self.nickname),
             "join": True
         }
         self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
@@ -580,7 +580,7 @@ class Game():
                     # send an update to everybody 
                     # game start 
                     packet = {
-                        "username": ''.join(self.nickname)
+                        "username": ''.join(self.nickname),
                         "start_mult": True
                     }
                     self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
@@ -830,6 +830,8 @@ class Game():
         while True:
             if self.send_my_pose == 1:
                 self.send_pose()
+                self.waiting_for_others = 1
+                self.show_screen('waiting_for_others_pose')
             else:
                 self.show_screen('waiting_for_new_pose')
                 # we got a new pose 
