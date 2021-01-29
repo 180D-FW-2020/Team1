@@ -606,7 +606,7 @@ class Game():
                 if self.pose_updated == 1: #local user tries to fit in the hole now
                     return
                 pass    
-        elif screen_type == 'waiting_for_new_pose':
+        elif screen_type == 'waiting_for_others_pose':
             cv2.putText(frame, "Waiting for other users to pose",(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             while True: #while in this loop, we're waiting for pose leader 
@@ -791,7 +791,7 @@ class Game():
             ## send message to person whose turn it is 
             print(self.users[cur_user])
             if self.move_on == 0 and self.users[cur_user] != ''.join(self.nickname):
-                self.show_screen('waiting_for_new_pose')
+                self.show_screen('waiting_for_others_pose')
                 start_time = time.perf_counter()
                 while True:
                     key = cv2.waitKey(1)
@@ -859,6 +859,7 @@ class Game():
                             "score": 5
                         }
                         self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
+                        self.pose_updated = 0
                         break
 
     def multiplayer(self):
