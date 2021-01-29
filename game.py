@@ -783,7 +783,7 @@ class Game():
                 self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
                 return
         pass 
-    def creator(self):
+    def creator_code(self):
         self.show_screen('start_game_multi') 
         # time.sleep(3)
         cur_user = 0
@@ -827,7 +827,7 @@ class Game():
             
             cur_user += 1
             cur_user %= (self.num_users+1)
-    def joiner(self):
+    def joiner_code(self):
         self.show_screen('waiting_for_creator')
         while True:
             if self.send_my_pose == 1:
@@ -868,9 +868,9 @@ class Game():
         print(self.room_name)
         self.createaws()
         if self.creator == 1:
-            self.creator()
+            self.creator_code()
         else: # regular user 
-            self.joiner()
+            self.joiner_code()
 
     def game(self):
         self.user_score = 0
