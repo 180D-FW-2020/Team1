@@ -812,21 +812,6 @@ class Game():
             ## send message to person whose turn it is 
             if self.move_on == 0 and self.users[cur_user] != ''.join(self.nickname):
                 self.show_screen('waiting_for_new_pose')
-                start_time = time.perf_counter()
-                while True:
-                    key = cv2.waitKey(1)
-                    _, frame = self.cap.read()
-                    time_elapsed = int(time.perf_counter() - start_time)
-                    time_remaining = 5 - time_elapsed
-                    cv2.imshow(WINDOWNAME, frame)
-                    if time_remaining <= 0: 
-                        cv2.imshow(WINDOWNAME, frame)
-                        packet = {
-                            "username": ''.join(self.nickname),
-                            "score": 5
-                        }
-                        self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
-                        break
             elif self.move_on == 1:
                 if self.users[cur_user] == ''.join(self.nickname):
                     print('it\'s {}\'s turn'.format(self.users[cur_user]))
