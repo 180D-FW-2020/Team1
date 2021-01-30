@@ -236,6 +236,7 @@ class Game():
                 self.send_my_pose = 0 
         if "round_over" in packet: # creator sends this across when the round is over --> don't keep waiting for others now
             self.waiting_for_others = 0
+            self.move_on = 1
         if "gesture" in packet:
             print(packet["gesture"])
             self.on_gesture(packet["gesture"])
@@ -260,7 +261,9 @@ class Game():
                     "round_over": 1
                 }
                 self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
-                self.round_scores = {}
+                time.sleep(1)
+
+
         if "join" in packet and self.creator == 1: # assuming initial message sends score
             # implement some stuff creator has to do when new players join via mqtt 
             # print(packet["join"])
