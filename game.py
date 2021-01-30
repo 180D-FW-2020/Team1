@@ -261,8 +261,7 @@ class Game():
                     "round_over": 1
                 }
                 self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
-                time.sleep(1)
-
+                self.round_scores = {}
 
         if "join" in packet and self.creator == 1: # assuming initial message sends score
             # implement some stuff creator has to do when new players join via mqtt 
@@ -646,6 +645,8 @@ class Game():
                     self.waiting_for_others = 1
                     self.show_screen('waiting_for_others_pose')
                     return
+                if self.move_on == 1 and self.creator == 1:
+                    return
                 pass    
         elif screen_type == 'level_end_multi':
             cv2.putText(frame,'Your score is {}'.format(5), (140, 220), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
@@ -657,6 +658,8 @@ class Game():
                     exit(0)
                 if self.next_leader == 1:
                     self.next_leader = 0
+                    return
+                if self.move_on == 1 and self.creator == 1:
                     return
         elif screen_type == 'waiting_for_others_pose':
             cv2.putText(frame, "Waiting for other users to match your pose",(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
@@ -841,13 +844,18 @@ class Game():
         cur_user = 0
         while True:
             ## send message to person whose turn it is 
-            if self.move_on == 0 and self.users[cur_user] != ''.join(self.nickname):
+            if self.move_on == 0: #and self.users[cur_user] != ''.join(self.nickname):
                 self.show_screen('waiting_for_new_pose')
                 self.show_screen('level_end_multi')
             
             elif self.move_on == 1:
                 if self.users[cur_user] == ''.join(self.nickname):
                     print('it\'s {}\'s turn'.format(self.users[cur_user]))
+                    packet = {
+                        "username": ''.join(self.nickname),
+                        "leader": self.users[cur_user]
+                    }
+                    self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
                     self.send_my_pose = 1
                     self.send_pose()
                     self.waiting_for_others = 1
