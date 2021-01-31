@@ -599,19 +599,19 @@ class Game():
                     return
                 pass
         elif screen_type == 'waiting_for_new_pose':
-            cv2.putText(frame, "Please wait for 2 seconds",(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-            cv2.imshow(WINDOWNAME, frame)
-            start_time = time.perf_counter()
-            while True: #while in this loop, we're waiting for pose leader 
-                key = cv2.waitKey(10)
-                if key == ESC_KEY:
-                    self.__del__()
-                    exit(0)
-                time_elapsed = int(time.perf_counter() - start_time)
-                time_remaining = 2 - time_elapsed
-                cv2.imshow(WINDOWNAME, frame)
-                if time_remaining <= 0: 
-                    break
+            # cv2.putText(frame, "Please wait for 2 seconds",(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+            # cv2.imshow(WINDOWNAME, frame)
+            # start_time = time.perf_counter()
+            # while True: #while in this loop, we're waiting for pose leader 
+            #     key = cv2.waitKey(10)
+            #     if key == ESC_KEY:
+            #         self.__del__()
+            #         exit(0)
+            #     time_elapsed = int(time.perf_counter() - start_time)
+            #     time_remaining = 2 - time_elapsed
+            #     cv2.imshow(WINDOWNAME, frame)
+            #     if time_remaining <= 0: 
+            #         break
                 
             frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
             txt = ''
