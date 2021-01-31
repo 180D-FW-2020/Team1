@@ -168,10 +168,11 @@ class PoseEstimation():
         img = np.zeros((480,640,3), np.uint8)
 
         for pair in self.POSE_PAIRS:
-            point = (points[pair[0]], points[pair[1]])
+            point1 = (points[pair[0]])
+            point2 = (points[pair[1]])
 
-            if point[0] and point[1]:
-                cv2.line(img, point[0], point[1], (255, 255, 255), thickness=80, lineType=cv2.FILLED)
+            if point1 and point2:
+                cv2.line(img, point1, point2, (255, 255, 255), thickness=80, lineType=cv2.FILLED)
         
         if show:
             cv2.imshow('Output-Contour', img) 
