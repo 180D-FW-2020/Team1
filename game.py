@@ -472,9 +472,9 @@ class Game():
             if DEBUG == 3:
                 return cv2.waitKey(0)
         elif screen_type == 'room':
-            cv2.putText(frame, "Enter a room code:",(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Enter a room code:",(115,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
             for i in range(len(self.room)):
-                cv2.putText(frame, self.room[i], (150+ 20*i,300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                cv2.putText(frame, self.room[i], (115+ 20*i,300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             num = 0
 
@@ -496,12 +496,12 @@ class Game():
                         self.room[num] = chr(key)
                         num += 1
                     frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
-                    cv2.putText(frame, "Enter a room code:",(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Enter a room code:",(115,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
                     for i in range(len(self.room)):
                         cv2.putText(frame, self.room[i], (115+ 20*i,300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.imshow(WINDOWNAME, frame)
         elif screen_type == 'nickname':
-            cv2.putText(frame, "Nickname:",(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Nickname:",(115,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             while True:
                 key = cv2.waitKey(0)
@@ -518,7 +518,7 @@ class Game():
                     else: 
                         self.nickname.append(chr(key))
                     frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
-                    cv2.putText(frame, "Nickname:",(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Nickname:",(115,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
                     for i in range(len(self.nickname)):
                         cv2.putText(frame, self.nickname[i], (115+ 20*i,300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.imshow(WINDOWNAME, frame)
@@ -599,7 +599,7 @@ class Game():
                     return
                 pass
         elif screen_type == 'waiting_for_new_pose':
-            cv2.putText(frame, "Please wait...",(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Please wait, assigning new leader.",(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             start_time = time.perf_counter()
             while True: #while in this loop, we're waiting for pose leader 
@@ -629,6 +629,9 @@ class Game():
                         _, frame = self.cap.read()
                         time_elapsed = int(time.perf_counter() - start_time)
                         time_remaining = 5 - time_elapsed
+                        contour_weight = 1
+                        contour, _ = self.PoseEstimator.getContourFromPoints(self.pose)
+                        frame = cv2.addWeighted(frame,self.uservid_weight,contour,contour_weight,0)
                         cv2.imshow(WINDOWNAME, frame)
                         if time_remaining <= 0: 
                             cv2.imshow(WINDOWNAME, frame)
