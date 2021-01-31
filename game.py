@@ -631,6 +631,7 @@ class Game():
                         time_remaining = 5 - time_elapsed
                         contour_weight = 1
                         contour, _ = self.PoseEstimator.getContourFromPoints(self.pose)
+                        contour = cv2.bitwise_not(contour)
                         frame = cv2.addWeighted(frame,self.uservid_weight,contour,contour_weight,0)
                         cv2.imshow(WINDOWNAME, frame)
                         if time_remaining <= 0: 
