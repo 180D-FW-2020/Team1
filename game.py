@@ -178,6 +178,7 @@ class Game():
         self.waiting_for_others = 0 #1 means that we (local user is pose leader) have sent our pose across and are waiting for others to finish fitting inside the hole 
         self.pose = [] # the pose we received from the pose leader 
         self.next_leader = 0 #1 means next leader has been chosen, move on to pose stuff
+        self.level_score = -1
         # self.my_state
         self.pose_leader = ''
         self.round_scores = {} # creator keeps track of who has what scores 
@@ -627,6 +628,7 @@ class Game():
                     while True:
                         key = cv2.waitKey(1)
                         _, frame = self.cap.read()
+                        original = np.copy(frame)
                         time_elapsed = int(time.perf_counter() - start_time)
                         time_remaining = 5 - time_elapsed
                         contour_weight = 1
@@ -635,14 +637,20 @@ class Game():
                         frame = cv2.addWeighted(frame,self.uservid_weight,contour,contour_weight,0)
                         cv2.imshow(WINDOWNAME, frame)
                         if time_remaining <= 0: 
-                            cv2.imshow(WINDOWNAME, frame)
-                            frame, points = self.PoseEstimator.getSkeleton(frame)
-                            level_score = self.PoseDetector.isWithinContour(points, contour)
+                            original, points = self.PoseEstimator.getSkeleton(original)
+                            self.level_score = self.PoseDetector.isWithinContour(points, contour)
+                            for pair in points:
+                                point1 = points[pair[0]]
+                                point2 = points[pair[1]]
+
+                                if point1 and point2:
+                                    cv2.line(frame, tuple(point1), tuple(point2), (0, 255, 255), 2)
+                                    cv2.circle(frame, tuple(point1), 8, (0, 0, 255), thickness=-1, lineType=cv2.FILLED)
                             cv2.imshow(WINDOWNAME, frame)
                             key = cv2.waitKey(2000)
                             packet = {
                                 "username": ''.join(self.nickname),
-                                "score": level_score
+                                "score": self.level_score
                             }
                             self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
                             self.pose_updated = 0
@@ -657,7 +665,7 @@ class Game():
                     return
                 pass    
         elif screen_type == 'level_end_multi':
-            cv2.putText(frame,'Your score is {}'.format(5), (140, 220), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame,'Your score is {}'.format(self.level_score), (140, 220), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             while True:
                 key = cv2.waitKey(10)
