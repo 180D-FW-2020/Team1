@@ -636,7 +636,7 @@ class Game():
                         cv2.imshow(WINDOWNAME, frame)
                         if time_remaining <= 0: 
                             cv2.imshow(WINDOWNAME, frame)
-                            frame, points = self.PoseEstimator.getPoints(frame)
+                            frame, points = self.PoseEstimator.getSkeleton(frame)
                             level_score = self.PoseDetector.isWithinContour(points, contour)
                             cv2.imshow(WINDOWNAME, frame)
                             key = cv2.waitKey(2000)
