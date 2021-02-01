@@ -110,12 +110,12 @@ class PoseEstimation():
 
         # Draw skeleton
         for pair in self.POSE_PAIRS:
-            partA = pair[0]
-            partB = pair[1]
+            point1 = points[pair[0]]
+            point2 = points[pair[1]]
 
-            if points[partA] and points[partB]:
-                cv2.line(frame, points[partA], points[partB], (0, 255, 255), 2)
-                cv2.circle(frame, points[partA], 8, (0, 0, 255), thickness=-1, lineType=cv2.FILLED)
+            if point1 and point2:
+                cv2.line(frame, tuple(point1), tuple(point2), (0, 255, 255), 2)
+                cv2.circle(frame, tuple(point1), 8, (0, 0, 255), thickness=-1, lineType=cv2.FILLED)
         if show:
             cv2.imshow('Output-Skeleton', frame)
             cv2.waitKey(0)
@@ -138,7 +138,7 @@ class PoseEstimation():
     def getContour(self, frame, show = False, output='Output-Contour.jpg'):
         _, points = self.getPoints(frame)
 
-        img = np.zeros((480,640))
+        img = np.zeros((480,640,3), np.uint8)
 
         for pair in self.POSE_PAIRS:
             partA = pair[0]
@@ -155,7 +155,7 @@ class PoseEstimation():
         return frame, points
 
     """
-    getContour(self, frame, show = False): Make the contour from set of points rather than frame
+    getContour(self, points, show = False, output='Output-Contour.jpg'): Make the contour from set of points rather than frame
     input: 
         points -> OpenPose input points
         show -> debugging to show the skeleton only 
@@ -165,20 +165,20 @@ class PoseEstimation():
     @TODO: create contour logic 
     """
     def getContourFromPoints(self, points, show = False, output='Output-Contour.jpg'):
-        img = np.zeros((480,640))
+        img = np.zeros((480,640,3), np.uint8)
 
         for pair in self.POSE_PAIRS:
-            partA = pair[0]
-            partB = pair[1]
+            point1 = points[pair[0]]
+            point2 = points[pair[1]]
 
-            if points[partA] and points[partB]:
-                cv2.line(img, points[partA], points[partB], 255, thickness=80, lineType=cv2.FILLED)
+            if point1 and point2:
+                cv2.line(img, tuple(point1), tuple(point2), (255, 255, 255), thickness=80, lineType=cv2.FILLED)
         
         if show:
             cv2.imshow('Output-Contour', img) 
-            cv2.waitKey(0) 
+            cv2.waitKey(0)
         cv2.imwrite(output, img)
-
+        
         return img, points
         
 

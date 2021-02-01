@@ -18,14 +18,16 @@ import boto3
 from botocore.config import Config
 from botocore.client import ClientError
 import key
-
 # OUTPUT = '.\output\\'
 # if os.path.isdir(OUTPUT) == False:
 #     os.makedir(OUTPUT)
 region='us-east-1'
 ROOM = 'ece180d-team1-room-'
 
+test_points = [(304, 88), (304, 136), (272, 160), (272, 216), (504, 152), (328, 152), (328, 232), (336, 264), (480, 192), (280, 368), (288, 416), (496, 192), (320, 368), (320, 416), (420, 420)]
+
 FONTCOLOR = (255,255,255)
+FONTCOLORBLACK = (0,0,0)
 FONT = cv2.FONT_HERSHEY_SIMPLEX
 FONTSIZE = 1
 
@@ -47,7 +49,16 @@ UP_KEY = 38
 DOWN_KEY = 40
 ZERO_KEY = 48
 ONE_KEY = 49
+TWO_KEY = 50
 BACK_KEY = 8
+
+STATE_WAITING_FOR_CREATOR = 0
+STATE_WAITING_FOR_POSE_RECEIPT = 1
+STATE_GOT_POSE = 2
+STATE_MY_TURN = 3
+
+TIMER_THRESHOLD_SMALL = 5
+
 
 # WINDOW Definition 
 WINDOWNAME = 'Hole in the Wall!'
@@ -120,7 +131,9 @@ class Game():
         self.client_mqtt.on_message = self.on_message
         self.client_mqtt.connect_async('broker.hivemq.com') # 2. connect to a broker using one of the connect*() functions.
         self.client_mqtt.loop_start() # 3. call one of the loop*() functions to maintain network traffic flow with the broker.
-        
+        self.users = {}
+        self.num_users = 0
+
         # powerups
         self.powerup_vals = {} 
         for powerup_file_name in power_up_file_names:
@@ -147,7 +160,7 @@ class Game():
         self.bucket = None
         self.creator = 0 # 1 for creator, 0 for joiner 
         self.room_name = '' 
-        self.multi_start = 0
+        self.multi_start = 0 #should we start or no (creator tells the rest)
 
         # User variables
         self.user_score = 0
@@ -158,7 +171,20 @@ class Game():
         self.TIMER_THRESHOLD = 20
         self.play = False
         self.reset_timer = -1
-        
+
+        # multi user variables
+        self.send_my_pose = 0 #1 means I'm the pose leader --> local user makes a pose
+        self.move_on = 1 #1 means round is over, creator chooses next pose leader --> CREATOR only 
+        self.pose_updated = 0 #1 means pose leader sent pose over mqtt --> ALL users should fit in hole 
+        self.waiting_for_others = 0 #1 means that we (local user is pose leader) have sent our pose across and are waiting for others to finish fitting inside the hole 
+        self.pose = [] # the pose we received from the pose leader 
+        self.next_leader = 0 #1 means next leader has been chosen, move on to pose stuff
+        self.level_score = -1
+        # self.my_state
+        self.pose_leader = ''
+        self.round_scores = {} # creator keeps track of who got what score that specific round -- emptied after each round ends 
+        self.total_scores = {} # creator keeps track of who has what score ovreal -- never empties 
+        # @NOTE indexing should be same for round_scores and total_scores
     # start mqtt 
     def on_connect(self, client, userdata, flags, rc):
         print("Connection returned result: "+str(rc))
@@ -200,26 +226,65 @@ class Game():
         print('Received message: "' + str(message.payload) + '" on topic "' +
         message.topic + '" with QoS ' + str(message.qos))
         packet = json.loads(message.payload)
-        print(packet["username"])
+        # print(packet["username"])
         user = packet["username"]
+
+        if "leader" in packet:
+            self.next_leader = 1
+            self.pose_leader = packet["leader"]
+            if packet["leader"] == ''.join(self.nickname): ## I am the leader 
+                self.send_my_pose = 1
+            else: ## ___ is the leader 
+                self.pose_updated = 0 
+                self.move_on = 0
+                self.send_my_pose = 0 
+        if "round_over" in packet: # creator sends this across when the round is over --> don't keep waiting for others now
+            self.waiting_for_others = 0
+            self.move_on = 1
         if "gesture" in packet:
             print(packet["gesture"])
             self.on_gesture(packet["gesture"])
-        if "pose" in packet:
+        if "send_my_pose" in packet and user != ''.join(self.nickname):
+            self.pose_updated = 1
+            self.pose = packet["pose"]
+            print(type(self.pose))
             print(packet["pose"])
             pass 
-        if "score" in packet:
-            print(packet["score"])
-            pass 
+        if "scoreboard" in packet: 
+            self.total_scores = packet["scoreboard"]
+        if "score" in packet and self.creator == 1:
+            # print(packet["score"])
+            # indicate next round
+            self.round_scores[user] = packet["score"]
+            self.total_scores[user] += packet["score"]
+            if len(self.round_scores) == self.num_users:
+                ## round is over 
+                self.move_on = 1
+                """
+                implement csv logic here
+                """
+                packet = {
+                    "username": ''.join(self.nickname),
+                    "round_over": 1,
+                    "scoreboard": self.total_scores
+                }
+                self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
+                self.round_scores = {}
+
         if "join" in packet and self.creator == 1: # assuming initial message sends score
             # implement some stuff creator has to do when new players join via mqtt 
-            print(packet["join"])
+            # print(packet["join"])
             if packet["join"] == True:
                 # joining 
+                # if self.num_users == 4:
+                #     pass # don't let them join, implement later 
                 f = open("room_info.csv", "a")
-                f.write('{},{}\n'.format(user, packet["score"]))
+                f.write('{},{}\n'.format(user, 0))
                 f.close()
                 self.client_aws.upload_file('room_info.csv', self.room_name, "room_info.csv")
+                self.num_users += 1
+                self.users[self.num_users] = user
+                self.total_scores[user] = 0
             pass 
         if "start_mult" in packet and self.creator == 0:
             self.multi_start = 1
@@ -229,7 +294,7 @@ class Game():
         valid = 0
         try:
             self.bucket = self.client_aws.create_bucket(Bucket= self.room_name)
-            print(self.bucket)
+            # print(self.bucket)
         except:
             self.show_screen('could_not_create')
             valid = 1
@@ -240,10 +305,11 @@ class Game():
         except ClientError as e:
             #print('does not exist') ## you're the creator 
             self.creator = 1 
+            self.users[self.num_users] = ''.join(self.nickname)
+            self.total_scores[''.join(self.nickname)] = 0
             self.client_mqtt.subscribe(self.room_name, qos=1)
             packet = {
-                "username": ''.join(self.nickname),
-                "score": 0 
+                "username": ''.join(self.nickname)
             }
             self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
             print(self.room_name)
@@ -259,7 +325,6 @@ class Game():
         print(self.room_name)
         packet = {
             "username": ''.join(self.nickname),
-            "score": 0,
             "join": True
         }
         self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
@@ -280,8 +345,14 @@ class Game():
         if self.powerup_vals[power_up_file_names[1]] > 0:
             self.powerup_vals[power_up_file_names[1]] -= 1
             self.slow_down_used = True
-    
-    def show_screen(self, screen_type, points = 0):
+    def tutorial(self):
+        ## tutorial
+        print('hello')
+        ## show rules first 
+        self.mode = 0
+        self.show_screen('tutorial')
+        
+    def show_screen(self, screen_type, points = 0, generic_txt = '', no_enter = 0):
         frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
         txt = ''
         if screen_type == 'start':
@@ -294,7 +365,8 @@ class Game():
                     if cv2.waitKey(500): 
                         break
             cv2.putText(frame, "Single Player Mode --- Enter", (175, 300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-            cv2.putText(frame, "Multi-Player Mode ---- 1", (175, 350), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Multi-Player Mode --- 1", (175, 350), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Tutorial --- 2", (175, 400), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.putText(frame, "-->",(135,300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             
@@ -307,16 +379,6 @@ class Game():
                     if self.mode == -1:
                         self.mode = 0
                     break
-                elif key == ONE_KEY:
-                    if self.mode != -1 and self.mode != 0:
-                        continue
-                    self.mode = 1
-                    frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
-                    cv2.putText(frame, txt, (140, 220), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-                    cv2.putText(frame, "Single Player Mode --- 0", (175, 300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-                    cv2.putText(frame, "Multi-Player Mode ---- Enter", (175, 350), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-                    cv2.putText(frame, "-->",(135,350), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-                    cv2.imshow(WINDOWNAME, frame)
                 elif key == ZERO_KEY:
                     if self.mode == 0:
                         continue
@@ -324,9 +386,33 @@ class Game():
                     frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
                     cv2.putText(frame, txt, (140, 220), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.putText(frame, "Single Player Mode --- Enter", (175, 300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-                    cv2.putText(frame, "Multi-Player Mode ---- 1", (175, 350), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Multi-Player Mode --- 1", (175, 350), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Tutorial --- 2", (175, 400), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.putText(frame, "-->",(135,300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.imshow(WINDOWNAME, frame)
+                elif key == ONE_KEY:
+                    if self.mode == 1:
+                        continue
+                    self.mode = 1
+                    frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
+                    cv2.putText(frame, txt, (140, 220), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Single Player Mode --- 0", (175, 300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Multi-Player Mode --- Enter", (175, 350), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Tutorial --- 2", (175, 400), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "-->",(135,350), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.imshow(WINDOWNAME, frame)
+                elif key == TWO_KEY:
+                    if self.mode == 2:
+                        continue
+                    self.mode = 2
+                    frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
+                    cv2.putText(frame, txt, (140, 220), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Single Player Mode --- 0", (175, 300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Multi-Player Mode --- 1", (175, 350), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Tutorial --- Enter", (175, 400), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "-->",(135, 400), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.imshow(WINDOWNAME, frame)
+                
         elif screen_type == 'difficulty':
             cv2.putText(frame, 'Select a difficulty:', (140, 220), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.putText(frame, "-->",(135,300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
@@ -417,9 +503,9 @@ class Game():
             if DEBUG == 3:
                 return cv2.waitKey(0)
         elif screen_type == 'room':
-            cv2.putText(frame, "Enter a room code:",(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Enter a room code:",(115,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
             for i in range(len(self.room)):
-                cv2.putText(frame, self.room[i], (150+ 20*i,300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                cv2.putText(frame, self.room[i], (115+ 20*i,300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             num = 0
 
@@ -441,12 +527,12 @@ class Game():
                         self.room[num] = chr(key)
                         num += 1
                     frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
-                    cv2.putText(frame, "Enter a room code:",(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Enter a room code:",(115,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
                     for i in range(len(self.room)):
                         cv2.putText(frame, self.room[i], (115+ 20*i,300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.imshow(WINDOWNAME, frame)
         elif screen_type == 'nickname':
-            cv2.putText(frame, "Nickname:",(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Nickname:",(115,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             while True:
                 key = cv2.waitKey(0)
@@ -463,7 +549,7 @@ class Game():
                     else: 
                         self.nickname.append(chr(key))
                     frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
-                    cv2.putText(frame, "Nickname:",(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Nickname:",(115,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
                     for i in range(len(self.nickname)):
                         cv2.putText(frame, self.nickname[i], (115+ 20*i,300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.imshow(WINDOWNAME, frame)
@@ -515,7 +601,6 @@ class Game():
                         cv2.putText(frame, '*', (115+ 20*i,300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.imshow(WINDOWNAME, frame)
             return
-
         elif screen_type == 'start_game_multi':
             cv2.putText(frame, "Press Enter to Start the Game".format(ROOM+''.join(self.room)),(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
@@ -529,7 +614,6 @@ class Game():
                     # game start 
                     packet = {
                         "username": ''.join(self.nickname),
-                        "score": self.user_score,
                         "start_mult": True
                     }
                     self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
@@ -545,6 +629,241 @@ class Game():
                 if self.multi_start == 1:
                     return
                 pass
+        elif screen_type == 'waiting_for_new_pose':
+            cv2.putText(frame, "Please wait, assigning new leader.",(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.imshow(WINDOWNAME, frame)
+            start_time = time.perf_counter()
+            while True: #while in this loop, we're waiting for pose leader 
+                key = cv2.waitKey(10)
+                if key == ESC_KEY:
+                    self.__del__()
+                    exit(0)
+                time_elapsed = int(time.perf_counter() - start_time)
+                time_remaining = 2 - time_elapsed
+                cv2.imshow(WINDOWNAME, frame)
+                if time_remaining <= 0: 
+                    break
+                
+            frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
+            txt = ''
+            cv2.putText(frame, "Please wait for user {} to create a pose".format(self.pose_leader),(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.imshow(WINDOWNAME, frame)
+            while True: #while in this loop, we're waiting for pose leader 
+                key = cv2.waitKey(10)
+                if key == ESC_KEY:
+                    self.__del__()
+                    exit(0)
+                if self.pose_updated == 1: #local user tries to fit in the hole now
+                    start_time = time.perf_counter()
+                    while True:
+                        key = cv2.waitKey(1)
+                        _, frame = self.cap.read()
+                        frame = cv2.flip(frame, 1)
+                        original = np.copy(frame)
+                        time_elapsed = int(time.perf_counter() - start_time)
+                        time_remaining = 5 - time_elapsed
+                        contour_weight = 1
+                        contour, _ = self.PoseEstimator.getContourFromPoints(self.pose)
+                        contour = cv2.bitwise_not(contour)
+                        frame = cv2.addWeighted(frame,self.uservid_weight,contour,contour_weight,0)
+                        cv2.imshow(WINDOWNAME, frame)
+                        if time_remaining <= 0: 
+                            original, points = self.PoseEstimator.getSkeleton(original)
+                            self.level_score = self.PoseDetector.isWithinContour(points, contour)
+                            for pair in self.PoseEstimator.POSE_PAIRS:
+                                point1 = points[pair[0]]
+                                point2 = points[pair[1]]
+
+                                if point1 and point2:
+                                    cv2.line(frame, tuple(point1), tuple(point2), (0, 255, 255), 2)
+                                    cv2.circle(frame, tuple(point1), 8, (0, 0, 255), thickness=-1, lineType=cv2.FILLED)
+                            cv2.imshow(WINDOWNAME, frame)
+                            key = cv2.waitKey(2000)
+                            packet = {
+                                "username": ''.join(self.nickname),
+                                "score": self.level_score
+                            }
+                            self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
+                            self.pose_updated = 0
+                            break
+                    return
+                if self.send_my_pose == 1:
+                    self.send_pose()
+                    self.waiting_for_others = 1
+                    self.show_screen('waiting_for_others_pose')
+                    return
+                if self.move_on == 1 and self.creator == 1:
+                    return
+                pass    
+        elif screen_type == 'level_end_multi':
+            cv2.putText(frame,'Your score is {}'.format(self.level_score), (140, 220), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.imshow(WINDOWNAME, frame)
+            while True:
+                key = cv2.waitKey(10)
+                if key == ESC_KEY:
+                    self.__del__()
+                    exit(0)
+                if self.next_leader == 1:
+                    time.sleep(2)
+                    frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
+                    cv2.putText(frame,'Scoreboard:'.format(self.level_score), (120, 120), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                    i = 0 
+                    for key, value in self.total_scores.items():
+                        cv2.putText(frame,'{}: {}'.format(key, value), (120, 140 + 20*i), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                        i += 1 
+                    cv2.imshow(WINDOWNAME, frame)
+                    cv2.waitKey(2000)
+                    self.next_leader = 0
+                    return
+                if self.move_on == 1 and self.creator == 1:
+                    return
+        elif screen_type == 'waiting_for_others_pose':
+            cv2.putText(frame, "Waiting for other users to match your pose",(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.imshow(WINDOWNAME, frame)
+            while True: #while in this loop, we're waiting for pose leader 
+                key = cv2.waitKey(10)
+                if key == ESC_KEY:
+                    self.__del__()
+                    exit(0)
+                if self.waiting_for_others == 0: #we're no longer waiting --> signify end of turn
+                    return
+                pass    
+        elif screen_type == 'tutorial':
+            phrases = ["Welcome to Hole in the Wall!",
+            "To play, you'll need:", 
+            "   - a laptop with front facing camera & microphone", 
+            "   - Raspberry Pi & IMU", "   - Internet conneciton", 
+            "and you're ready to go!",
+            "",
+            "",
+            "Press Enter to go to the Rules page"]
+            i = 0
+            for phrase in phrases:
+                cv2.putText(frame, phrase,(100, 140 + i*25), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                i += 1
+            cv2.imshow(WINDOWNAME, frame)
+            while True: #while in this loop, we're waiting for pose leader 
+                key = cv2.waitKey(10)
+                if key == ESC_KEY:
+                    self.__del__()
+                    exit(0)
+                if key == ENTER_KEY:
+                    self.show_screen('tutorial2')
+        elif screen_type == 'tutorial2':
+            phrases = ["Rules:",
+            "- Timer in the top left corner will indicate how much time you have left.", 
+            "- The screen will get more opaque as time goes on to indicate where the hole is.", 
+            "- To score more points, fit your body in the hole as accurately as you can when the timer hits zero.",
+            "",
+            "",
+            "Press Enter to go to the Power Ups page"]
+            i = 0
+            for phrase in phrases:
+                cv2.putText(frame, phrase,(100, 140 + i*25), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                i += 1
+            cv2.imshow(WINDOWNAME, frame)
+            while True: #while in this loop, we're waiting for pose leader 
+                key = cv2.waitKey(10)
+                if key == ESC_KEY:
+                    self.__del__()
+                    exit(0)
+                if key == ENTER_KEY:
+                    self.show_screen('tutorial3')
+        elif screen_type == 'tutorial3':
+            phrases = ["Powerups:",
+            "- Extend the Deadline: doubles the timer", 
+            "- Double Points: instantly takes a picture and ends the round, but you get double points",
+            "",
+            "",
+            "Press Enter to go to the Calibration page"]#, 
+            #"- Mirror the Wall: mirror’s your opponent(s) walls",
+            #"- Lights Out: blacks out your opponent(s) screen"]
+
+            i = 0
+            for phrase in phrases:
+                cv2.putText(frame, phrase,(100, 140 + i*25), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                i += 1
+            cv2.imshow(WINDOWNAME, frame)
+            while True: #while in this loop, we're waiting for pose leader 
+                key = cv2.waitKey(10)
+                if key == ESC_KEY:
+                    self.__del__()
+                    exit(0)
+                if key == ENTER_KEY:
+                    self.show_screen('tutorial4')
+        elif screen_type == 'tutorial4':
+            phrases = ["Calibration:",
+            "Now, we will help you calibrate your camera.", 
+            "Please tilt your camera or stand farther away to fit within this test contour!",
+            "",
+            "",
+            "Press Enter to start calibrating"]
+
+            i = 0
+            for phrase in phrases:
+                cv2.putText(frame, phrase,(100, 140 + i*25), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                i += 1
+            cv2.imshow(WINDOWNAME, frame)
+            while True: #while in this loop, we're waiting for pose leader 
+                key = cv2.waitKey(10)
+                if key == ESC_KEY:
+                    self.__del__()
+                    exit(0)
+                if key == ENTER_KEY:
+                    #self.show_screen('tutorial4')
+                    self.calibrate()
+                    self.game() 
+                    return
+        elif generic_txt != '':
+            cv2.putText(frame, "{}".format(generic_txt),(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.imshow(WINDOWNAME, frame)
+            while True: #while in this loop, we're waiting for pose leader 
+                if no_enter == 1: 
+                    return    
+                key = cv2.waitKey(10)
+                if key == ESC_KEY:
+                    self.__del__()
+                    exit(0)
+                if key == ENTER_KEY:
+                    return
+                pass    
+    def calibrate(self):
+        #print('hello')
+        contour = cv2.imread(PATH + 'test.jpg')
+        contour = cv2.bitwise_not(contour)
+        valid_config = 0
+        while valid_config == 0:
+            start_time = int(time.perf_counter())
+            while True:
+                time_elapsed = int(time.perf_counter()-start_time)
+                time_remaining = 5 - time_elapsed
+                key = cv2.waitKey(1)
+                if key == ESC_KEY:
+                    self.__del__()
+                    exit(0)
+                _, frame = self.cap.read()
+                frame = cv2.flip(frame, 1)
+                original = np.copy(frame)
+                frame = cv2.addWeighted(frame,self.uservid_weight,contour,1,0)
+                cv2.putText(frame, "Time Remaining: {}".format(time_remaining), (10, 50), FONT, .8, FONTCOLORBLACK, FONTSIZE, lineType=cv2.LINE_AA)
+                cv2.imshow(WINDOWNAME, frame)
+                if time_remaining <= -1:
+                    ## check their pose 
+                    cv2.imshow(WINDOWNAME, frame)
+                    frame, points = self.PoseEstimator.getSkeleton(original)
+                    level_score = self.PoseDetector.isWithinContour(points, contour)
+                    cv2.imshow(WINDOWNAME,frame)
+                    cv2.waitKey(2000)
+                    if level_score >= 8:
+                        self.show_screen('',generic_txt='Calibration complete! Have fun!', no_enter = 1)
+                        valid_config = 1
+                    else:
+                        self.show_screen('',generic_txt='Calibration failed! Please try again.', no_enter = 1)
+                    cv2.waitKey(2000)
+                    break
+            
+
+            
 
     def editFrame(self, frame, start_time, contour, override_time = False):
         original = np.copy(frame)
@@ -591,7 +910,7 @@ class Game():
         cv2.putText(frame, "Score: {}".format(self.user_score), (500, 50), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
         # print('time remaining', time_remaining)
         return frame, time_remaining, original
-
+    
     def level(self):
         self.play = True
         timer_old = self.TIMER_THRESHOLD
@@ -608,7 +927,7 @@ class Game():
         frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
         self.show_screen('level')
         start_time = time.perf_counter()
-        print(start_time)
+        # print(start_time)
         override_time=False
         stop = False
         while True:
@@ -663,8 +982,8 @@ class Game():
                 while True:
                     if cv2.waitKey(100):
                         break
-                print('original shape', original.shape)
-                print(contour.shape)
+                # print('original shape', original.shape)
+                # print(contour.shape)
                 frame, points = self.PoseEstimator.getPoints(original)
                 level_score = self.PoseDetector.isWithinContour(points, contour)
                 if DEBUG == 2:
@@ -690,7 +1009,88 @@ class Game():
             self.level()
             if self.TIMER_THRESHOLD > 5:
                 self.TIMER_THRESHOLD -= 2
+    def send_pose(self):
+        ## include screen to say "you're up"
+        self.move_on = 0
+        start_time = time.perf_counter()
+        while self.send_my_pose == 1: 
+            key = cv2.waitKey(1)
+            _, frame = self.cap.read()
+            frame = cv2.flip(frame, 1)
+            # frame, time_remaining, original = self.editFrame(frame, start_time, contour, override_time=override_time)
+            cv2.imshow(WINDOWNAME, frame)
+            time_elapsed = int(time.perf_counter() - start_time)
+            time_remaining = 5 - time_elapsed
+            if time_remaining <= 0: 
+                frame, points = self.PoseEstimator.getSkeleton(frame)
+                for pair in self.PoseEstimator.POSE_PAIRS:
+                    point1 = points[pair[0]]
+                    point2 = points[pair[1]]
 
+                    if point1 and point2:
+                        cv2.line(frame, tuple(point1), tuple(point2), (0, 255, 255), 2)
+                        cv2.circle(frame, tuple(point1), 8, (0, 0, 255), thickness=-1, lineType=cv2.FILLED)
+                cv2.imshow(WINDOWNAME, frame)
+                cv2.waitKey(2000)
+                self.send_my_pose = 0
+                packet = {
+                    "username": ''.join(self.nickname),
+                    "send_my_pose": 1,
+                    "pose": points
+                }
+                self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
+                return
+        pass 
+    def creator_code(self):
+        self.show_screen('start_game_multi') 
+        # time.sleep(3)
+        cur_user = 0
+        while True:
+            ## send message to person whose turn it is 
+            if self.move_on == 0: #and self.users[cur_user] != ''.join(self.nickname):
+                self.show_screen('waiting_for_new_pose')
+                self.show_screen('level_end_multi')
+            
+            elif self.move_on == 1:
+                if self.users[cur_user] == ''.join(self.nickname):
+                    print('it\'s {}\'s turn'.format(self.users[cur_user]))
+                    packet = {
+                        "username": ''.join(self.nickname),
+                        "leader": self.users[cur_user]
+                    }
+                    self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
+                    self.send_my_pose = 1
+                    self.send_pose()
+                    self.waiting_for_others = 1
+                    self.show_screen('waiting_for_others_pose')
+                else:
+                    packet = {
+                        "username": ''.join(self.nickname),
+                        "leader": self.users[cur_user]
+                    }
+                    print('it\'s {}\'s turn'.format(self.users[cur_user]))
+                    self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
+                    self.move_on = 0
+            
+                cur_user += 1
+                cur_user %= (self.num_users+1)
+    def joiner_code(self):
+        self.show_screen('waiting_for_creator')
+        while True:
+            self.show_screen('waiting_for_new_pose')
+            self.show_screen('level_end_multi')
+            # we got a new pose 
+            # for i in range(len(self.pose)):
+            #     self.pose[i] = tuple(self.pose[i])
+            # _, _ = self.PoseEstimator.getContourFromPoints(self.pose)
+            # contour = cv2.imread('Output-Contour.jpg')
+            # contour = cv2.bitwise_not(contour)
+            # while True:
+            #     key = cv2.waitKey(1)
+            #     _, frame = self.cap.read()
+            #     # frame = cv2.addWeighted(frame,self.uservid_weight,contour,1,0)
+            #     cv2.imshow(WINDOWNAME, frame)
+            
     def multiplayer(self):
         self.show_screen('room')
         self.show_screen('nickname') 
@@ -698,10 +1098,9 @@ class Game():
         print(self.room_name)
         self.createaws()
         if self.creator == 1:
-            self.show_screen('start_game_multi') 
-            time.sleep(3)
-        else: 
-            self.show_screen('waiting_for_creator')
+            self.creator_code()
+        else: # regular user 
+            self.joiner_code()
 
     def game(self):
         self.user_score = 0
@@ -721,35 +1120,54 @@ class Game():
             self.singleplayer()
         elif self.mode == 1: 
             self.multiplayer()
+        elif self.mode == 2:
+            self.tutorial()
         else:
             print('error')
             exit(1)
 
     def test(self):
-        frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
-        example_arr = [None, (352, 296), (320, 296), None, None, (416, 160), (296, 112), (256, 120), (352, 120), None, None, (488, 168), None, None, (440, 160)]
-        output = contour_pictures[0]
-        count = 0 
-        for point in example_arr:
-            if point == None or point[0] > 480 or point[1] > 640:
-                continue
-                # cv2.circle(output, (point[0],point[1]), 8, (0, 255, 255), thickness=-1, lineType=cv2.FILLED)
-            if output[point[0],point[1],0] > 20 and output[point[0],point[1],1] > 20 and output[point[0],point[1],2] > 20:
-                count +=1
-        for point in example_arr:
-            if point != None:
-                cv2.circle(output, (point[0],point[1]), 8, (0, 255, 255), thickness=-1, lineType=cv2.FILLED)
-        print(count)
-        cv2.imshow('test',output)
-        while True:
-            if cv2.waitKey(0):
-                break
-
+        # frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
+        # example_arr = [None, (352, 296), (320, 296), None, None, (416, 160), (296, 112), (256, 120), (352, 120), None, None, (488, 168), None, None, (440, 160)]
+        # output = contour_pictures[0]
+        # count = 0 
+        # for point in example_arr:
+        #     if point == None or point[0] > 480 or point[1] > 640:
+        #         continue
+        #         # cv2.circle(output, (point[0],point[1]), 8, (0, 255, 255), thickness=-1, lineType=cv2.FILLED)
+        #     if output[point[0],point[1],0] > 20 and output[point[0],point[1],1] > 20 and output[point[0],point[1],2] > 20:
+        #         count +=1
+        # for point in example_arr:
+        #     if point != None:
+        #         cv2.circle(output, (point[0],point[1]), 8, (0, 255, 255), thickness=-1, lineType=cv2.FILLED)
+        # print(count)
+        # cv2.imshow('test',output)
+        # while True:
+        #     if cv2.waitKey(0):
+        #         break
+        # 
+        # 
+        # 
+        # 
+        
+        
+        
+        
+        # contour = cv2.imread('Output-Contour.jpg')
+        # contour = cv2.bitwise_not(contour)
+        # print(contour.shape)
+        # while True: 
+        #     _, frame = self.cap.read()
+        #     # print(frame.shape)
+        #     # frame = cv2.addWeighted(frame,self.uservid_weight,contour,1,0)
+        #     cv2.imshow(WINDOWNAME, frame)
+        pass 
     def __del__(self):
         cv2.destroyAllWindows()
         self.client_mqtt.loop_stop()
         self.client_mqtt.disconnect()
         self.voice.stop()
+    
 
 def main():
     game = Game()

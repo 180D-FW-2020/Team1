@@ -10,7 +10,7 @@
 main.py
 testVision.py
 key.py
-
+room_info.csv
 !/graphics/**
 
 __pycache__/
