@@ -841,12 +841,20 @@ class Game():
         while self.send_my_pose == 1: 
             key = cv2.waitKey(1)
             _, frame = self.cap.read()
+            frame = cv2.flip(frame, 1)
             # frame, time_remaining, original = self.editFrame(frame, start_time, contour, override_time=override_time)
             cv2.imshow(WINDOWNAME, frame)
             time_elapsed = int(time.perf_counter() - start_time)
             time_remaining = 5 - time_elapsed
             if time_remaining <= 0: 
                 frame, points = self.PoseEstimator.getSkeleton(frame)
+                for pair in self.PoseEstimator.POSE_PAIRS:
+                    point1 = points[pair[0]]
+                    point2 = points[pair[1]]
+
+                    if point1 and point2:
+                        cv2.line(frame, tuple(point1), tuple(point2), (0, 255, 255), 2)
+                        cv2.circle(frame, tuple(point1), 8, (0, 0, 255), thickness=-1, lineType=cv2.FILLED)
                 cv2.imshow(WINDOWNAME, frame)
                 time.sleep(2)
                 self.send_my_pose = 0
