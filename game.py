@@ -270,9 +270,7 @@ class Game():
                 }
                 self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
                 self.round_scores = {}
-        if "player_left" in packet and self.creator == 0:
-            show_screen('', generic_txt='Multiplayer timed out. Ending game now.')
-            self.game()
+
         if "join" in packet and self.creator == 1: # assuming initial message sends score
             # implement some stuff creator has to do when new players join via mqtt 
             # print(packet["join"])
@@ -703,20 +701,8 @@ class Game():
                     self.waiting_for_others = 1
                     self.show_screen('waiting_for_others_pose')
                     return
-                start_time = time.perf_counter()
                 if self.move_on == 1 and self.creator == 1:
                     return
-                elif self.move_on == 0 and self.creator == 1:
-                    time_elapsed = int(time.perf_counter() - start_time)
-                    time_remaining = 20 - time_elapsed
-                    if time_remaining <= -1:
-                        self.show_screen('', generic_txt='Multiplayer timed out. Ending game now.')
-                        packet = {
-                            "username": ''.join(self.nickname),
-                            "player_left":1
-                        }
-                        self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
-                        
                 pass    
         elif screen_type == 'level_end_multi':
             cv2.putText(frame,'Your score is {}'.format(self.level_score), (140, 220), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
@@ -743,22 +729,11 @@ class Game():
         elif screen_type == 'waiting_for_others_pose':
             cv2.putText(frame, "Waiting for other users to match your pose",(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
-            start_time = time.perf_counter()
             while True: #while in this loop, we're waiting for pose leader 
                 key = cv2.waitKey(10)
                 if key == ESC_KEY:
                     self.__del__()
                     exit(0)
-                if self.waiting_for_others == 1 and self.creator == 1:
-                    time_elapsed = int(time.perf_counter() - start_time)
-                    time_remaining = 20 - time_elapsed
-                    if time_remaining <= -1:
-                        self.show_screen('', generic_txt='Multiplayer timed out. Ending game now.')
-                        packet = {
-                            "username": ''.join(self.nickname),
-                            "player_left":1
-                        }
-                        self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
                 if self.waiting_for_others == 0: #we're no longer waiting --> signify end of turn
                     return
                 pass    
