@@ -1068,6 +1068,7 @@ class Game():
                     self.send_pose()
                     self.waiting_for_others = 1
                     self.show_screen('waiting_for_others_pose')
+                    self.show_screen('level_end_multi')
                 else:
                     packet = {
                         "username": ''.join(self.nickname),
