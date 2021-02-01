@@ -503,7 +503,7 @@ class Game():
             if DEBUG == 3:
                 return cv2.waitKey(0)
         elif screen_type == 'room':
-            cv2.putText(frame, "Enter a room code:",(115,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Enter a 6-character room code:",(115,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
             for i in range(len(self.room)):
                 cv2.putText(frame, self.room[i], (115+ 20*i,300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
@@ -514,20 +514,20 @@ class Game():
                 if key == ESC_KEY:
                     self.__del__()
                     exit(0)
-                elif num >= len(self.room) and key == ENTER_KEY:
+                elif num == len(self.room) and key == ENTER_KEY:
                     return # go to aws creation
                 else:
-                    if num >= len(self.room):
-                        continue
                     if key == BACK_KEY:
-                        self.room[num] = '*'
                         if num > 0:
                             num -= 1
+                        self.room[num] = '*'
+                    elif num >= len(self.room):
+                        continue
                     elif chr(key)!= '*':
                         self.room[num] = chr(key)
                         num += 1
                     frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
-                    cv2.putText(frame, "Enter a room code:",(115,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Enter a 6-character room code:",(115,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
                     for i in range(len(self.room)):
                         cv2.putText(frame, self.room[i], (115+ 20*i,300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.imshow(WINDOWNAME, frame)
@@ -828,7 +828,6 @@ class Game():
                     return
                 pass    
     def calibrate(self):
-        #print('hello')
         contour = cv2.imread(PATH + 'test.jpg')
         contour = cv2.bitwise_not(contour)
         valid_config = 0
@@ -861,9 +860,6 @@ class Game():
                         self.show_screen('',generic_txt='Calibration failed! Please try again.', no_enter = 1)
                     cv2.waitKey(2000)
                     break
-            
-
-            
 
     def editFrame(self, frame, start_time, contour, override_time = False):
         original = np.copy(frame)
