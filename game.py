@@ -689,8 +689,8 @@ class Game():
                     for key, value in self.total_scores.items():
                         cv2.putText(frame,'{}: {}'.format(key, value), (120, 140 + 20*i), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
                         i += 1 
-                    cv2.waitKey(2000)
                     cv2.imshow(WINDOWNAME, frame)
+                    cv2.waitKey(2000)
                     self.next_leader = 0
                     return
                 if self.move_on == 1 and self.creator == 1:
