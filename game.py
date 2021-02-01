@@ -255,7 +255,7 @@ class Game():
             # print(packet["score"])
             # indicate next round
             self.round_scores[user] = packet["score"]
-            self.total_scores += packet["score"]
+            self.total_scores[user] += packet["score"]
             if len(self.round_scores) == self.num_users:
                 ## round is over 
                 self.move_on = 1
