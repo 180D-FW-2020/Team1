@@ -639,7 +639,7 @@ class Game():
                         if time_remaining <= 0: 
                             original, points = self.PoseEstimator.getSkeleton(original)
                             self.level_score = self.PoseDetector.isWithinContour(points, contour)
-                            for pair in points:
+                            for pair in self.PoseEstimator.POSE_PAIRS:
                                 point1 = points[pair[0]]
                                 point2 = points[pair[1]]
 
