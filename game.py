@@ -270,7 +270,9 @@ class Game():
                 }
                 self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
                 self.round_scores = {}
-
+        if "player_left" in packet and self.creator == 0:
+            show_screen('', generic_txt='Multiplayer timed out. Ending game now.')
+            self.game()
         if "join" in packet and self.creator == 1: # assuming initial message sends score
             # implement some stuff creator has to do when new players join via mqtt 
             # print(packet["join"])
@@ -301,33 +303,38 @@ class Game():
         if valid == 1:
             self.game()
         try:
-            self.client_aws.head_object(Bucket=self.room_name, Key='room_info.csv')
+            self.client_aws.head_object(Bucket=self.room_name, Key='do_not_join.txt')
+            self.show_screen('',generic_txt='Room not available. Please try again.')
+            self.game()
         except ClientError as e:
             #print('does not exist') ## you're the creator 
-            self.creator = 1 
-            self.users[self.num_users] = ''.join(self.nickname)
-            self.total_scores[''.join(self.nickname)] = 0
+            try:
+                self.client_aws.head_object(Bucket=self.room_name, Key='room_info.csv')
+            except ClientError as e:
+                self.creator = 1 
+                self.users[self.num_users] = ''.join(self.nickname)
+                self.total_scores[''.join(self.nickname)] = 0
+                self.client_mqtt.subscribe(self.room_name, qos=1)
+                packet = {
+                    "username": ''.join(self.nickname)
+                }
+                self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
+                print(self.room_name)
+                f = open("room_info.csv", "w")
+                f.write('{},{}\n'.format(''.join(self.nickname),self.user_score))
+                f.close()
+                self.client_aws.upload_file('room_info.csv', self.room_name, "room_info.csv")
+                #local file name, bucket, remote file name
+                return
+
+            # you're the joiner 
             self.client_mqtt.subscribe(self.room_name, qos=1)
+            print(self.room_name)
             packet = {
-                "username": ''.join(self.nickname)
+                "username": ''.join(self.nickname),
+                "join": True
             }
             self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
-            print(self.room_name)
-            f = open("room_info.csv", "w")
-            f.write('{},{}\n'.format(''.join(self.nickname),self.user_score))
-            f.close()
-            self.client_aws.upload_file('room_info.csv', self.room_name, "room_info.csv")
-            #local file name, bucket, remote file name
-            return
-
-        # you're the joiner 
-        self.client_mqtt.subscribe(self.room_name, qos=1)
-        print(self.room_name)
-        packet = {
-            "username": ''.join(self.nickname),
-            "join": True
-        }
-        self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
 
     
     def activate(self):
@@ -617,6 +624,10 @@ class Game():
                         "start_mult": True
                     }
                     self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
+                    f = open("do_not_join.txt", "w")
+                    f.write('do not join')
+                    f.close()
+                    self.client_aws.upload_file('do_not_join.txt', self.room_name, "do_not_join.txt")
                     return
         elif screen_type == 'waiting_for_creator':
             cv2.putText(frame, "Please wait for creator to start the game".format(ROOM+''.join(self.room)),(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
@@ -692,8 +703,20 @@ class Game():
                     self.waiting_for_others = 1
                     self.show_screen('waiting_for_others_pose')
                     return
+                start_time = time.perf_counter()
                 if self.move_on == 1 and self.creator == 1:
                     return
+                elif self.move_on == 0 and self.creator == 1:
+                    time_elapsed = int(time.perf_counter() - start_time)
+                    time_remaining = 20 - time_elapsed
+                    if time_remaining <= -1:
+                        self.show_screen('', generic_txt='Multiplayer timed out. Ending game now.')
+                        packet = {
+                            "username": ''.join(self.nickname),
+                            "player_left":1
+                        }
+                        self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
+                        
                 pass    
         elif screen_type == 'level_end_multi':
             cv2.putText(frame,'Your score is {}'.format(self.level_score), (140, 220), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
@@ -720,11 +743,22 @@ class Game():
         elif screen_type == 'waiting_for_others_pose':
             cv2.putText(frame, "Waiting for other users to match your pose",(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
+            start_time = time.perf_counter()
             while True: #while in this loop, we're waiting for pose leader 
                 key = cv2.waitKey(10)
                 if key == ESC_KEY:
                     self.__del__()
                     exit(0)
+                if self.waiting_for_others == 1 and self.creator == 1:
+                    time_elapsed = int(time.perf_counter() - start_time)
+                    time_remaining = 20 - time_elapsed
+                    if time_remaining <= -1:
+                        self.show_screen('', generic_txt='Multiplayer timed out. Ending game now.')
+                        packet = {
+                            "username": ''.join(self.nickname),
+                            "player_left":1
+                        }
+                        self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
                 if self.waiting_for_others == 0: #we're no longer waiting --> signify end of turn
                     return
                 pass    
