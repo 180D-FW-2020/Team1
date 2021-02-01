@@ -636,9 +636,11 @@ class Game():
                         cv2.imshow(WINDOWNAME, frame)
                         if time_remaining <= 0: 
                             cv2.imshow(WINDOWNAME, frame)
+                            frame, points = self.PoseEstimator.getPoints(frame)
+                            level_score = self.PoseDetector.isWithinContour(points, contour)
                             packet = {
                                 "username": ''.join(self.nickname),
-                                "score": 5
+                                "score": level_score
                             }
                             self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
                             self.pose_updated = 0
@@ -966,6 +968,7 @@ class Game():
         self.client_mqtt.loop_stop()
         self.client_mqtt.disconnect()
         self.voice.stop()
+    
 
 def main():
     game = Game()
