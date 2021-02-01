@@ -179,7 +179,7 @@ class Game():
         self.waiting_for_others = 0 #1 means that we (local user is pose leader) have sent our pose across and are waiting for others to finish fitting inside the hole 
         self.pose = [] # the pose we received from the pose leader 
         self.next_leader = 0 #1 means next leader has been chosen, move on to pose stuff
-        self.level_score = -1
+        self.level_score = 0
         # self.my_state
         self.pose_leader = ''
         self.round_scores = {} # creator keeps track of who got what score that specific round -- emptied after each round ends 
@@ -270,7 +270,9 @@ class Game():
                 }
                 self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
                 self.round_scores = {}
-
+        if "player_left" in packet:
+            self.show_screen('', generic_txt='Someone left the game. Ending game now.')
+            self.game()
         if "join" in packet and self.creator == 1: # assuming initial message sends score
             # implement some stuff creator has to do when new players join via mqtt 
             # print(packet["join"])
@@ -707,7 +709,17 @@ class Game():
         elif screen_type == 'level_end_multi':
             cv2.putText(frame,'Your score is {}'.format(self.level_score), (140, 220), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
+            start_time = time.perf_counter()
             while True:
+                if self.creator == 1:
+                    time_elapsed = int(time.perf_counter() - start_time)
+                    time_remaining = 15 - time_elapsed
+                    if time_remaining <= -1: 
+                        packet = {
+                            "username": ''.join(self.nickname),
+                            "player_left": 1
+                        }
+                        self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
                 key = cv2.waitKey(10)
                 if key == ESC_KEY:
                     self.__del__()
@@ -736,6 +748,15 @@ class Game():
                     exit(0)
                 if self.waiting_for_others == 0: #we're no longer waiting --> signify end of turn
                     return
+                if self.creator == 1 and self.waiting_for_others == 1:
+                    time_elapsed = int(time.perf_counter() - start_time)
+                    time_remaining = 15 - time_elapsed
+                    if time_remaining <= -1: 
+                        packet = {
+                            "username": ''.join(self.nickname),
+                            "player_left": 1
+                        }
+                        self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
                 pass    
         elif screen_type == 'tutorial':
             phrases = ["Welcome to Hole in the Wall!",
