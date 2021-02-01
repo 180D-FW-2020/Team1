@@ -18,7 +18,6 @@ import boto3
 from botocore.config import Config
 from botocore.client import ClientError
 import key
-
 # OUTPUT = '.\output\\'
 # if os.path.isdir(OUTPUT) == False:
 #     os.makedir(OUTPUT)
@@ -28,6 +27,7 @@ ROOM = 'ece180d-team1-room-'
 test_points = [(304, 88), (304, 136), (272, 160), (272, 216), (504, 152), (328, 152), (328, 232), (336, 264), (480, 192), (280, 368), (288, 416), (496, 192), (320, 368), (320, 416), (420, 420)]
 
 FONTCOLOR = (255,255,255)
+FONTCOLORBLACK = (0,0,0)
 FONT = cv2.FONT_HERSHEY_SIMPLEX
 FONTSIZE = 1
 
@@ -49,6 +49,7 @@ UP_KEY = 38
 DOWN_KEY = 40
 ZERO_KEY = 48
 ONE_KEY = 49
+TWO_KEY = 50
 BACK_KEY = 8
 
 STATE_WAITING_FOR_CREATOR = 0
@@ -56,7 +57,7 @@ STATE_WAITING_FOR_POSE_RECEIPT = 1
 STATE_GOT_POSE = 2
 STATE_MY_TURN = 3
 
-
+TIMER_THRESHOLD_SMALL = 5
 
 
 # WINDOW Definition 
@@ -344,8 +345,14 @@ class Game():
         if self.powerup_vals[power_up_file_names[1]] > 0:
             self.powerup_vals[power_up_file_names[1]] -= 1
             self.slow_down_used = True
-    
-    def show_screen(self, screen_type, points = 0):
+    def tutorial(self):
+        ## tutorial
+        print('hello')
+        ## show rules first 
+        self.mode = 0
+        self.show_screen('tutorial')
+        
+    def show_screen(self, screen_type, points = 0, generic_txt = '', no_enter = 0):
         frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
         txt = ''
         if screen_type == 'start':
@@ -359,6 +366,7 @@ class Game():
                         break
             cv2.putText(frame, "Single Player Mode --- Enter", (175, 300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.putText(frame, "Multi-Player Mode --- 1", (175, 350), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Tutorial --- 2", (175, 400), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.putText(frame, "-->",(135,300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             
@@ -371,16 +379,6 @@ class Game():
                     if self.mode == -1:
                         self.mode = 0
                     break
-                elif key == ONE_KEY:
-                    if self.mode != -1 and self.mode != 0:
-                        continue
-                    self.mode = 1
-                    frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
-                    cv2.putText(frame, txt, (140, 220), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-                    cv2.putText(frame, "Single Player Mode --- 0", (175, 300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-                    cv2.putText(frame, "Multi-Player Mode --- Enter", (175, 350), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-                    cv2.putText(frame, "-->",(135,350), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-                    cv2.imshow(WINDOWNAME, frame)
                 elif key == ZERO_KEY:
                     if self.mode == 0:
                         continue
@@ -389,8 +387,32 @@ class Game():
                     cv2.putText(frame, txt, (140, 220), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.putText(frame, "Single Player Mode --- Enter", (175, 300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.putText(frame, "Multi-Player Mode --- 1", (175, 350), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Tutorial --- 2", (175, 400), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.putText(frame, "-->",(135,300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.imshow(WINDOWNAME, frame)
+                elif key == ONE_KEY:
+                    if self.mode == 1:
+                        continue
+                    self.mode = 1
+                    frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
+                    cv2.putText(frame, txt, (140, 220), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Single Player Mode --- 0", (175, 300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Multi-Player Mode --- Enter", (175, 350), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Tutorial --- 2", (175, 400), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "-->",(135,350), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.imshow(WINDOWNAME, frame)
+                elif key == TWO_KEY:
+                    if self.mode == 2:
+                        continue
+                    self.mode = 2
+                    frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
+                    cv2.putText(frame, txt, (140, 220), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Single Player Mode --- 0", (175, 300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Multi-Player Mode --- 1", (175, 350), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Tutorial --- Enter", (175, 400), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "-->",(135, 400), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.imshow(WINDOWNAME, frame)
+                
         elif screen_type == 'difficulty':
             cv2.putText(frame, 'Select a difficulty:', (140, 220), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.putText(frame, "-->",(135,300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
@@ -706,6 +728,143 @@ class Game():
                 if self.waiting_for_others == 0: #we're no longer waiting --> signify end of turn
                     return
                 pass    
+        elif screen_type == 'tutorial':
+            phrases = ["Welcome to Hole in the Wall!",
+            "To play, you'll need:", 
+            "   - a laptop with front facing camera & microphone", 
+            "   - Raspberry Pi & IMU", "   - Internet conneciton", 
+            "and you're ready to go!",
+            "",
+            "",
+            "Press Enter to go to the Rules page"]
+            i = 0
+            for phrase in phrases:
+                cv2.putText(frame, phrase,(100, 140 + i*25), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                i += 1
+            cv2.imshow(WINDOWNAME, frame)
+            while True: #while in this loop, we're waiting for pose leader 
+                key = cv2.waitKey(10)
+                if key == ESC_KEY:
+                    self.__del__()
+                    exit(0)
+                if key == ENTER_KEY:
+                    self.show_screen('tutorial2')
+        elif screen_type == 'tutorial2':
+            phrases = ["Rules:",
+            "- Timer in the top left corner will indicate how much time you have left.", 
+            "- The screen will get more opaque as time goes on to indicate where the hole is.", 
+            "- To score more points, fit your body in the hole as accurately as you can when the timer hits zero.",
+            "",
+            "",
+            "Press Enter to go to the Power Ups page"]
+            i = 0
+            for phrase in phrases:
+                cv2.putText(frame, phrase,(100, 140 + i*25), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                i += 1
+            cv2.imshow(WINDOWNAME, frame)
+            while True: #while in this loop, we're waiting for pose leader 
+                key = cv2.waitKey(10)
+                if key == ESC_KEY:
+                    self.__del__()
+                    exit(0)
+                if key == ENTER_KEY:
+                    self.show_screen('tutorial3')
+        elif screen_type == 'tutorial3':
+            phrases = ["Powerups:",
+            "- Extend the Deadline: doubles the timer", 
+            "- Double Points: instantly takes a picture and ends the round, but you get double points",
+            "",
+            "",
+            "Press Enter to go to the Calibration page"]#, 
+            #"- Mirror the Wall: mirror’s your opponent(s) walls",
+            #"- Lights Out: blacks out your opponent(s) screen"]
+
+            i = 0
+            for phrase in phrases:
+                cv2.putText(frame, phrase,(100, 140 + i*25), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                i += 1
+            cv2.imshow(WINDOWNAME, frame)
+            while True: #while in this loop, we're waiting for pose leader 
+                key = cv2.waitKey(10)
+                if key == ESC_KEY:
+                    self.__del__()
+                    exit(0)
+                if key == ENTER_KEY:
+                    self.show_screen('tutorial4')
+        elif screen_type == 'tutorial4':
+            phrases = ["Calibration:",
+            "Now, we will help you calibrate your camera.", 
+            "Please tilt your camera or stand farther away to fit within this test contour!",
+            "",
+            "",
+            "Press Enter to start calibrating"]
+
+            i = 0
+            for phrase in phrases:
+                cv2.putText(frame, phrase,(100, 140 + i*25), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                i += 1
+            cv2.imshow(WINDOWNAME, frame)
+            while True: #while in this loop, we're waiting for pose leader 
+                key = cv2.waitKey(10)
+                if key == ESC_KEY:
+                    self.__del__()
+                    exit(0)
+                if key == ENTER_KEY:
+                    #self.show_screen('tutorial4')
+                    self.calibrate()
+                    self.game() 
+                    return
+        elif generic_txt != '':
+            cv2.putText(frame, "{}".format(generic_txt),(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.imshow(WINDOWNAME, frame)
+            while True: #while in this loop, we're waiting for pose leader 
+                if no_enter == 1: 
+                    return    
+                key = cv2.waitKey(10)
+                if key == ESC_KEY:
+                    self.__del__()
+                    exit(0)
+                if key == ENTER_KEY:
+                    return
+                pass    
+    def calibrate(self):
+        #print('hello')
+        contour = cv2.imread(PATH + 'test.jpg')
+        contour = cv2.bitwise_not(contour)
+        valid_config = 0
+        while valid_config == 0:
+            start_time = int(time.perf_counter())
+            while True:
+                time_elapsed = int(time.perf_counter()-start_time)
+                time_remaining = 5 - time_elapsed
+                key = cv2.waitKey(1)
+                if key == ESC_KEY:
+                    self.__del__()
+                    exit(0)
+                _, frame = self.cap.read()
+                frame = cv2.flip(frame, 1)
+                original = np.copy(frame)
+                frame = cv2.addWeighted(frame,self.uservid_weight,contour,1,0)
+                cv2.putText(frame, "Time Remaining: {}".format(time_remaining), (10, 50), FONT, .8, FONTCOLORBLACK, FONTSIZE, lineType=cv2.LINE_AA)
+                cv2.imshow(WINDOWNAME, frame)
+                if time_remaining <= -1:
+                    ## check their pose 
+                    cv2.imshow(WINDOWNAME, frame)
+                    frame, points = self.PoseEstimator.getSkeleton(original)
+                    level_score = self.PoseDetector.isWithinContour(points, contour)
+                    cv2.imshow(WINDOWNAME,frame)
+                    cv2.waitKey(2000)
+                    if level_score >= 8:
+                        self.show_screen('',generic_txt='Calibration complete! Have fun!', no_enter = 1)
+                        valid_config = 1
+                    else:
+                        self.show_screen('',generic_txt='Calibration failed! Please try again.', no_enter = 1)
+                    cv2.waitKey(2000)
+                    break
+            
+
+            
+
     def editFrame(self, frame, start_time, contour, override_time = False):
         original = np.copy(frame)
         time_elapsed = int(time.perf_counter()-start_time)
@@ -961,6 +1120,8 @@ class Game():
             self.singleplayer()
         elif self.mode == 1: 
             self.multiplayer()
+        elif self.mode == 2:
+            self.tutorial()
         else:
             print('error')
             exit(1)
