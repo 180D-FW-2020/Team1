@@ -628,6 +628,7 @@ class Game():
                     while True:
                         key = cv2.waitKey(1)
                         _, frame = self.cap.read()
+                        frame = cv2.flip(frame, 1)
                         original = np.copy(frame)
                         time_elapsed = int(time.perf_counter() - start_time)
                         time_remaining = 5 - time_elapsed
@@ -845,12 +846,14 @@ class Game():
             time_elapsed = int(time.perf_counter() - start_time)
             time_remaining = 5 - time_elapsed
             if time_remaining <= 0: 
+                frame, points = self.PoseEstimator.getSkeleton(frame)
                 cv2.imshow(WINDOWNAME, frame)
+                time.sleep(2)
                 self.send_my_pose = 0
                 packet = {
                     "username": ''.join(self.nickname),
                     "send_my_pose": 1,
-                    "pose": test_points
+                    "pose": points
                 }
                 self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
                 return
