@@ -856,7 +856,7 @@ class Game():
                         cv2.line(frame, tuple(point1), tuple(point2), (0, 255, 255), 2)
                         cv2.circle(frame, tuple(point1), 8, (0, 0, 255), thickness=-1, lineType=cv2.FILLED)
                 cv2.imshow(WINDOWNAME, frame)
-                time.sleep(2)
+                cv2.waitKey(2000)
                 self.send_my_pose = 0
                 packet = {
                     "username": ''.join(self.nickname),
