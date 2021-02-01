@@ -181,7 +181,9 @@ class Game():
         self.level_score = -1
         # self.my_state
         self.pose_leader = ''
-        self.round_scores = {} # creator keeps track of who has what scores 
+        self.round_scores = {} # creator keeps track of who got what score that specific round -- emptied after each round ends 
+        self.total_scores = {} # creator keeps track of who has what score ovreal -- never empties 
+        # @NOTE indexing should be same for round_scores and total_scores
     # start mqtt 
     def on_connect(self, client, userdata, flags, rc):
         print("Connection returned result: "+str(rc))
@@ -247,10 +249,13 @@ class Game():
             print(type(self.pose))
             print(packet["pose"])
             pass 
+        if "scoreboard" in packet: 
+            self.total_scores = packet["scoreboard"]
         if "score" in packet and self.creator == 1:
             # print(packet["score"])
             # indicate next round
-            self.round_scores[packet["username"]] = packet["score"]
+            self.round_scores[user] = packet["score"]
+            self.total_scores += packet["score"]
             if len(self.round_scores) == self.num_users:
                 ## round is over 
                 self.move_on = 1
@@ -260,6 +265,7 @@ class Game():
                 packet = {
                     "username": ''.join(self.nickname),
                     "round_over": 1
+                    "scoreboard": self.total_scores
                 }
                 self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
                 self.round_scores = {}
@@ -277,6 +283,7 @@ class Game():
                 self.client_aws.upload_file('room_info.csv', self.room_name, "room_info.csv")
                 self.num_users += 1
                 self.users[self.num_users] = user
+                self.total_scores[user] = 0
             pass 
         if "start_mult" in packet and self.creator == 0:
             self.multi_start = 1
@@ -298,6 +305,7 @@ class Game():
             #print('does not exist') ## you're the creator 
             self.creator = 1 
             self.users[self.num_users] = ''.join(self.nickname)
+            self.total_scores[''.join(self.nickname)] = 0
             self.client_mqtt.subscribe(self.room_name, qos=1)
             packet = {
                 "username": ''.join(self.nickname)
@@ -675,6 +683,14 @@ class Game():
                     exit(0)
                 if self.next_leader == 1:
                     time.sleep(2)
+                    frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
+                    cv2.putText(frame,'Scoreboard:'.format(self.level_score), (120, 120), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                    i = 0 
+                    for key, value in self.total_scores.items():
+                        cv2.putText(frame,'{}: {}'.format(key, value), (120, 140 + 20*i), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                        i += 1 
+                    cv2.waitKey(2000)
+                    cv2.imshow(WINDOWNAME, frame)
                     self.next_leader = 0
                     return
                 if self.move_on == 1 and self.creator == 1:
