@@ -638,6 +638,8 @@ class Game():
                             cv2.imshow(WINDOWNAME, frame)
                             frame, points = self.PoseEstimator.getPoints(frame)
                             level_score = self.PoseDetector.isWithinContour(points, contour)
+                            cv2.imshow(WINDOWNAME, frame)
+                            key = cv2.waitKey(2000)
                             packet = {
                                 "username": ''.join(self.nickname),
                                 "score": level_score
@@ -663,6 +665,7 @@ class Game():
                     self.__del__()
                     exit(0)
                 if self.next_leader == 1:
+                    time.sleep(2)
                     self.next_leader = 0
                     return
                 if self.move_on == 1 and self.creator == 1:
