@@ -741,6 +741,7 @@ class Game():
         elif screen_type == 'waiting_for_others_pose':
             cv2.putText(frame, "Waiting for other users to match your pose",(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
+            start_time = time.perf_counter()
             while True: #while in this loop, we're waiting for pose leader 
                 key = cv2.waitKey(10)
                 if key == ESC_KEY:
