@@ -615,13 +615,22 @@ class Game():
             cv2.putText(frame, "Press Enter to Start the Game".format(ROOM+''.join(self.room)),(140,220), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             while True:
-                key = cv2.waitKey(0)
+                frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
+                i = 0
+                for key, value in self.users.items():
+                    cv2.putText(frame, "{} is in the lobby.".format(value),(200,240+i*25), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                    i += 1
+                cv2.putText(frame, "Press Enter to Start the Game".format(ROOM+''.join(self.room)),(140,220), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                cv2.imshow(WINDOWNAME, frame)
+                key = cv2.waitKey(10)
                 if key == ESC_KEY:
                     self.__del__()
                     exit(0)
                 elif key == ENTER_KEY:
                     # send an update to everybody 
                     # game start 
+                    if self.num_users < 1:
+                        continue
                     packet = {
                         "username": ''.join(self.nickname),
                         "start_mult": True
