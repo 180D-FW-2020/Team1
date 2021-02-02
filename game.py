@@ -181,6 +181,7 @@ class Game():
         self.next_leader = 0 #1 means next leader has been chosen, move on to pose stuff
         self.level_score = 0
         # self.my_state
+        self.score_received = 0
         self.pose_leader = ''
         self.round_scores = {} # creator keeps track of who got what score that specific round -- emptied after each round ends 
         self.total_scores = {} # creator keeps track of who has what score ovreal -- never empties 
@@ -252,6 +253,7 @@ class Game():
             pass 
         if "scoreboard" in packet: 
             self.total_scores = packet["scoreboard"]
+            self.score_received = 1
         if "score" in packet and self.creator == 1:
             # print(packet["score"])
             # indicate next round
@@ -644,17 +646,13 @@ class Game():
             cv2.putText(frame, "Please wait, assigning new leader.",(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             start_time = time.perf_counter()
-            while True: #while in this loop, we're waiting for pose leader 
+            while self.next_leader == 0: #while in this loop, we're waiting for pose leader 
                 key = cv2.waitKey(10)
                 if key == ESC_KEY:
                     self.__del__()
                     exit(0)
-                time_elapsed = int(time.perf_counter() - start_time)
-                time_remaining = 2 - time_elapsed
-                cv2.imshow(WINDOWNAME, frame)
-                if time_remaining <= 0: 
-                    break
                 
+            self.next_leader = 0
             frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
             txt = ''
             cv2.putText(frame, "Please wait for user {} to create a pose".format(self.pose_leader),(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
@@ -724,7 +722,7 @@ class Game():
                 if key == ESC_KEY:
                     self.__del__()
                     exit(0)
-                if self.next_leader == 1:
+                if self.score_received == 1:
                     time.sleep(2)
                     frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
                     cv2.putText(frame,'Scoreboard:'.format(self.level_score), (120, 120), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
@@ -734,7 +732,7 @@ class Game():
                         i += 1 
                     cv2.imshow(WINDOWNAME, frame)
                     cv2.waitKey(2000)
-                    self.next_leader = 0
+                    self.score_received = 0
                     return
                 if self.move_on == 1 and self.creator == 1:
                     return
