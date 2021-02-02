@@ -670,11 +670,13 @@ class Game():
                         frame = cv2.flip(frame, 1)
                         original = np.copy(frame)
                         time_elapsed = int(time.perf_counter() - start_time)
-                        time_remaining = 5 - time_elapsed
+                        time_remaining = 10 - time_elapsed
                         contour_weight = 1
                         contour, _ = self.PoseEstimator.getContourFromPoints(self.pose)
                         contour = cv2.bitwise_not(contour)
                         frame = cv2.addWeighted(frame,self.uservid_weight,contour,contour_weight,0)
+                        cv2.putText(frame, "Time Remaining: {}".format(time_remaining), (10, 50), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                        # cv2.putText(frame, "Score: {}".format(self.user_score), (500, 50), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
                         cv2.imshow(WINDOWNAME, frame)
                         if time_remaining <= 0: 
                             original, points = self.PoseEstimator.getSkeleton(original)
@@ -733,8 +735,9 @@ class Game():
                     cv2.imshow(WINDOWNAME, frame)
                     cv2.waitKey(2000)
                     self.score_received = 0
-                    if self.move_on == 1 and self.creator == 1:
-                        return
+                    return
+                if self.move_on == 1 and self.creator == 1:
+                    return
         elif screen_type == 'waiting_for_others_pose':
             self.next_leader = 0
             cv2.putText(frame, "Waiting for other users to match your pose",(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
@@ -1043,9 +1046,12 @@ class Game():
             _, frame = self.cap.read()
             frame = cv2.flip(frame, 1)
             # frame, time_remaining, original = self.editFrame(frame, start_time, contour, override_time=override_time)
-            cv2.imshow(WINDOWNAME, frame)
+            
             time_elapsed = int(time.perf_counter() - start_time)
-            time_remaining = 5 - time_elapsed
+            time_remaining = 10 - time_elapsed
+            cv2.putText(frame, "Time Remaining: {}".format(time_remaining), (10, 50), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+
+            cv2.imshow(WINDOWNAME, frame)
             if time_remaining <= 0: 
                 frame, points = self.PoseEstimator.getSkeleton(frame)
                 for pair in self.PoseEstimator.POSE_PAIRS:
