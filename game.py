@@ -711,7 +711,7 @@ class Game():
             while True:
                 if self.creator == 1:
                     time_elapsed = int(time.perf_counter() - start_time)
-                    time_remaining = 15 - time_elapsed
+                    time_remaining = 60 - time_elapsed
                     if time_remaining <= -1: 
                         packet = {
                             "username": ''.join(self.nickname),
@@ -733,9 +733,8 @@ class Game():
                     cv2.imshow(WINDOWNAME, frame)
                     cv2.waitKey(2000)
                     self.score_received = 0
-                    return
-                if self.move_on == 1 and self.creator == 1:
-                    return
+                    if self.move_on == 1 and self.creator == 1:
+                        return
         elif screen_type == 'waiting_for_others_pose':
             self.next_leader = 0
             cv2.putText(frame, "Waiting for other users to match your pose",(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
@@ -750,7 +749,7 @@ class Game():
                     return
                 if self.creator == 1 and self.waiting_for_others == 1:
                     time_elapsed = int(time.perf_counter() - start_time)
-                    time_remaining = 15 - time_elapsed
+                    time_remaining = 60 - time_elapsed
                     if time_remaining <= -1: 
                         packet = {
                             "username": ''.join(self.nickname),
