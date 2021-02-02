@@ -679,7 +679,7 @@ class Game():
                         cv2.putText(frame, "Time Remaining: {}".format(time_remaining), (10, 50), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                         # cv2.putText(frame, "Score: {}".format(self.user_score), (500, 50), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                         cv2.imshow(WINDOWNAME, frame)
-                        if time_remaining <= 0: 
+                        if time_remaining <= -1: 
                             original, points = self.PoseEstimator.getSkeleton(original)
                             self.level_score = self.PoseDetector.isWithinContour(points, contour)
                             for pair in self.PoseEstimator.POSE_PAIRS:
@@ -1056,10 +1056,10 @@ class Game():
             time_elapsed = int(time.perf_counter() - start_time)
             time_remaining = 10 - time_elapsed
             cv2.putText(frame, "Time Remaining: {}".format(time_remaining), (10, 50), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
-            cv2.putText(frame, "Make a contour!".format(time_remaining), (375, 50), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Strike a pose!".format(time_remaining), (375, 50), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
 
             cv2.imshow(WINDOWNAME, frame)
-            if time_remaining <= 0: 
+            if time_remaining <= -1: 
                 frame, points = self.PoseEstimator.getSkeleton(frame)
                 for pair in self.PoseEstimator.POSE_PAIRS:
                     point1 = points[pair[0]]
