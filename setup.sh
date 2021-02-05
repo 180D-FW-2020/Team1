@@ -1,7 +1,6 @@
 #!/usr/bin/env bash 
 
 #list name of packages
-conda env create
 echo "installing base packages"
 conda create -y -n hitw python=3.6 numpy pandas joblib pyaudio smbus2 paho-mqtt scikit-learn opencv speechrecognition boto3 -c conda-forge
 conda activate hitw 

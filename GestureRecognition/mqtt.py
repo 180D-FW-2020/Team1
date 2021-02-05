@@ -9,21 +9,33 @@ usage_msg = '''%prog [username] [roomcode]
 connect using username and roomcode from main game.'''
 
 parser = OptionParser(usage=usage_msg)
-parser.add_option('-u', '--username', dest='username', help='use same username as main game')
-parser.add_option('-r', '--roomcode', dest='roomcode', help='use same roomcode as main game')
+parser.add_option('-m', '--mode', dest='mode', default='s', help='single player \'s\' or multiplayer \'m\', default = single player', metavar="MODE")
+parser.add_option('-u', '--username', dest='username', help='use same username as main game', metavar="USER")
+parser.add_option('-r', '--roomcode', dest='roomcode', help='use same roomcode as main game', metavar="ROOM")
 
 options, args = parser.parse_args(sys.argv[1:]) 
 
-if not options.username: 
-    parser.error("Please enter username.")
+# single player mode 
+if not options.mode or if options.mode == 's': 
+    if options.username: 
+        parser.error("No username for single player.")
+    if options.roomcode: 
+        parser.error("No roomcode for single player.")
+    username = "singleplayer"
+# multiplayer mode 
+elif options.mode == 'm': 
+    if not options.username: 
+        parser.error("Please enter username.")
+    if not options.roomcode: 
+        parser.error("Please enter roomcode.")
 
-if not options.roomcode: 
-    parser.error("Please enter roomcode.")
+    username = str(options.username)
+    roomcode = str(options.roomcode) 
 
-username = str(options.username)
-roomcode = str(options.roomcode) 
+    connection_string += roomcode
+else: 
+    parser.error("Please select a valid mode: single player \'s\' or multiplayer \'m\'")
 
-connection_string += roomcode
 
 # 0. define callbacks - functions that run when events happen.
 # The callback for when the client receives a CONNACK response from the server.
@@ -76,13 +88,11 @@ while True:
     prediction = n.classify()
     # print(prediction)
     if(prediction != "negative_trim" and last_classification != prediction): 
-        print("sending")
         packet = {
         "username": username,
         "gesture": prediction
         }
         client.publish(connection_string, json.dumps(packet), qos=1)
-        print("sent")
     # print("after")
     last_classification = prediction
     pass
