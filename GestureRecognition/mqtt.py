@@ -10,23 +10,25 @@ connect using username and roomcode from main game.'''
 
 parser = OptionParser(usage=usage_msg)
 parser.add_option('-m', '--mode', dest='mode', default='s', help='single player \'s\' or multiplayer \'m\', default = single player', metavar="MODE")
-parser.add_option('-u', '--username', dest='username', help='use same username as main game', metavar="USER")
-parser.add_option('-r', '--roomcode', dest='roomcode', help='use same roomcode as main game', metavar="ROOM")
+parser.add_option('-u', '--username', dest='username', default='', help='use same username as main game', metavar="USER")
+parser.add_option('-r', '--roomcode', dest='roomcode', default='', help='use same roomcode as main game', metavar="ROOM")
 
 options, args = parser.parse_args(sys.argv[1:]) 
 
 # single player mode 
 if not options.mode or if options.mode == 's': 
-    if options.username: 
-        parser.error("No username for single player.")
+    if options.username != '': 
+        username = options.username
+    else: 
+        username = "singleplayer"
     if options.roomcode: 
         parser.error("No roomcode for single player.")
-    username = "singleplayer"
+    
 # multiplayer mode 
 elif options.mode == 'm': 
-    if not options.username: 
+    if options.username == '': 
         parser.error("Please enter username.")
-    if not options.roomcode: 
+    if options.roomcode == '': 
         parser.error("Please enter roomcode.")
 
     username = str(options.username)
