@@ -5,7 +5,7 @@ from optparse import OptionParser
 from gesture_detector import * 
 connection_string = "ece180d-team1-room-"
 
-usage_msg = '''%prog [username] [roomcode]
+usage_msg = '''%prog [mode] [username] [roomcode - multiplayer only]
 connect using username and roomcode from main game.'''
 
 parser = OptionParser(usage=usage_msg)
@@ -16,28 +16,27 @@ parser.add_option('-r', '--roomcode', dest='roomcode', default='', help='use sam
 options, args = parser.parse_args(sys.argv[1:]) 
 
 # single player mode 
-if not options.mode or if options.mode == 's': 
+if not options.mode or options.mode == 's': 
     if options.username != '': 
-        username = options.username
+        username = str(options.username) 
     else: 
         username = "singleplayer"
     if options.roomcode: 
         parser.error("No roomcode for single player.")
-    
-# multiplayer mode 
-elif options.mode == 'm': 
-    if options.username == '': 
-        parser.error("Please enter username.")
-    if options.roomcode == '': 
-        parser.error("Please enter roomcode.")
 
+#multiplayer mode 
+if options.roomcode != '': 
+    if options.username == '':
+        parser.error("Please enter username for multiplayer mode.")
     username = str(options.username)
     roomcode = str(options.roomcode) 
-
     connection_string += roomcode
-else: 
+elif options.roomcode == '' and options.mode == 'm':
+    if options.roomcode == '':
+        parser.error("Please enter roomcode for multiplayer mode.")
+    
+if options.mode != 's' or options.mode != 'm': 
     parser.error("Please select a valid mode: single player \'s\' or multiplayer \'m\'")
-
 
 # 0. define callbacks - functions that run when events happen.
 # The callback for when the client receives a CONNACK response from the server.
