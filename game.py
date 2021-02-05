@@ -339,7 +339,6 @@ class Game():
             }
             self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
 
-    
     def activate(self):
         if self.play == False:
             return
@@ -1073,7 +1072,6 @@ class Game():
                 for pair in self.PoseEstimator.POSE_PAIRS:
                     point1 = points[pair[0]]
                     point2 = points[pair[1]]
-
                     if point1 and point2:
                         cv2.line(frame, tuple(point1), tuple(point2), (0, 255, 255), 2)
                         cv2.circle(frame, tuple(point1), 8, (0, 0, 255), thickness=-1, lineType=cv2.FILLED)
