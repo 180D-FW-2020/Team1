@@ -26,8 +26,9 @@ ROOM = 'ece180d-team1-room-'
 
 test_points = [(304, 88), (304, 136), (272, 160), (272, 216), (504, 152), (328, 152), (328, 232), (336, 264), (480, 192), (280, 368), (288, 416), (496, 192), (320, 368), (320, 416), (420, 420)]
 
-FONTCOLOR = (255,255,255)
+FONTCOLORWHITE = (255,255,255)
 FONTCOLORBLACK = (0,0,0)
+FONTCOLORDEFAULT = (236, 183, 76) ## blue
 FONT = cv2.FONT_HERSHEY_SIMPLEX
 FONTSIZE = 1
 
@@ -179,8 +180,9 @@ class Game():
         self.waiting_for_others = 0 #1 means that we (local user is pose leader) have sent our pose across and are waiting for others to finish fitting inside the hole 
         self.pose = [] # the pose we received from the pose leader 
         self.next_leader = 0 #1 means next leader has been chosen, move on to pose stuff
-        self.level_score = -1
+        self.level_score = 0
         # self.my_state
+        self.score_received = 0
         self.pose_leader = ''
         self.round_scores = {} # creator keeps track of who got what score that specific round -- emptied after each round ends 
         self.total_scores = {} # creator keeps track of who has what score ovreal -- never empties 
@@ -252,6 +254,7 @@ class Game():
             pass 
         if "scoreboard" in packet: 
             self.total_scores = packet["scoreboard"]
+            self.score_received = 1
         if "score" in packet and self.creator == 1:
             # print(packet["score"])
             # indicate next round
@@ -270,7 +273,9 @@ class Game():
                 }
                 self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
                 self.round_scores = {}
-
+        if "player_left" in packet:
+            self.show_screen('', generic_txt='Someone left the game. Ending game now.')
+            self.game()
         if "join" in packet and self.creator == 1: # assuming initial message sends score
             # implement some stuff creator has to do when new players join via mqtt 
             # print(packet["join"])
@@ -301,35 +306,39 @@ class Game():
         if valid == 1:
             self.game()
         try:
-            self.client_aws.head_object(Bucket=self.room_name, Key='room_info.csv')
+            self.client_aws.head_object(Bucket=self.room_name, Key='do_not_join.txt')
+            self.show_screen('',generic_txt='Room not available. Please try again.')
+            self.game()
         except ClientError as e:
             #print('does not exist') ## you're the creator 
-            self.creator = 1 
-            self.users[self.num_users] = ''.join(self.nickname)
-            self.total_scores[''.join(self.nickname)] = 0
+            try:
+                self.client_aws.head_object(Bucket=self.room_name, Key='room_info.csv')
+            except ClientError as e:
+                self.creator = 1 
+                self.users[self.num_users] = ''.join(self.nickname)
+                self.total_scores[''.join(self.nickname)] = 0
+                self.client_mqtt.subscribe(self.room_name, qos=1)
+                packet = {
+                    "username": ''.join(self.nickname)
+                }
+                self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
+                print(self.room_name)
+                f = open("room_info.csv", "w")
+                f.write('{},{}\n'.format(''.join(self.nickname),self.user_score))
+                f.close()
+                self.client_aws.upload_file('room_info.csv', self.room_name, "room_info.csv")
+                #local file name, bucket, remote file name
+                return
+
+            # you're the joiner 
             self.client_mqtt.subscribe(self.room_name, qos=1)
+            print(self.room_name)
             packet = {
-                "username": ''.join(self.nickname)
+                "username": ''.join(self.nickname),
+                "join": True
             }
             self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
-            print(self.room_name)
-            f = open("room_info.csv", "w")
-            f.write('{},{}\n'.format(''.join(self.nickname),self.user_score))
-            f.close()
-            self.client_aws.upload_file('room_info.csv', self.room_name, "room_info.csv")
-            #local file name, bucket, remote file name
-            return
 
-        # you're the joiner 
-        self.client_mqtt.subscribe(self.room_name, qos=1)
-        print(self.room_name)
-        packet = {
-            "username": ''.join(self.nickname),
-            "join": True
-        }
-        self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
-
-    
     def activate(self):
         if self.play == False:
             return
@@ -359,15 +368,15 @@ class Game():
             words = ['HOLE ', 'IN ', 'THE ', 'WALL']
             for word in words:
                 txt += word
-                cv2.putText(frame, txt, (140, 220), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                cv2.putText(frame, txt, (140, 220), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                 cv2.imshow(WINDOWNAME, frame)
                 while True:
                     if cv2.waitKey(500): 
                         break
-            cv2.putText(frame, "Single Player Mode --- Enter", (175, 300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-            cv2.putText(frame, "Multi-Player Mode --- 1", (175, 350), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-            cv2.putText(frame, "Tutorial --- 2", (175, 400), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-            cv2.putText(frame, "-->",(135,300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Single Player Mode --- Enter", (175, 300), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Multi-Player Mode --- 1", (175, 350), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Tutorial --- 2", (175, 400), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "-->",(135,300), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             
             while True:
@@ -384,41 +393,41 @@ class Game():
                         continue
                     self.mode = 0
                     frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
-                    cv2.putText(frame, txt, (140, 220), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-                    cv2.putText(frame, "Single Player Mode --- Enter", (175, 300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-                    cv2.putText(frame, "Multi-Player Mode --- 1", (175, 350), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-                    cv2.putText(frame, "Tutorial --- 2", (175, 400), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-                    cv2.putText(frame, "-->",(135,300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, txt, (140, 220), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Single Player Mode --- Enter", (175, 300), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Multi-Player Mode --- 1", (175, 350), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Tutorial --- 2", (175, 400), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "-->",(135,300), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.imshow(WINDOWNAME, frame)
                 elif key == ONE_KEY:
                     if self.mode == 1:
                         continue
                     self.mode = 1
                     frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
-                    cv2.putText(frame, txt, (140, 220), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-                    cv2.putText(frame, "Single Player Mode --- 0", (175, 300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-                    cv2.putText(frame, "Multi-Player Mode --- Enter", (175, 350), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-                    cv2.putText(frame, "Tutorial --- 2", (175, 400), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-                    cv2.putText(frame, "-->",(135,350), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, txt, (140, 220), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Single Player Mode --- 0", (175, 300), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Multi-Player Mode --- Enter", (175, 350), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Tutorial --- 2", (175, 400), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "-->",(135,350), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.imshow(WINDOWNAME, frame)
                 elif key == TWO_KEY:
                     if self.mode == 2:
                         continue
                     self.mode = 2
                     frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
-                    cv2.putText(frame, txt, (140, 220), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-                    cv2.putText(frame, "Single Player Mode --- 0", (175, 300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-                    cv2.putText(frame, "Multi-Player Mode --- 1", (175, 350), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-                    cv2.putText(frame, "Tutorial --- Enter", (175, 400), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-                    cv2.putText(frame, "-->",(135, 400), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, txt, (140, 220), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Single Player Mode --- 0", (175, 300), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Multi-Player Mode --- 1", (175, 350), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Tutorial --- Enter", (175, 400), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "-->",(135, 400), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.imshow(WINDOWNAME, frame)
                 
         elif screen_type == 'difficulty':
-            cv2.putText(frame, 'Select a difficulty:', (140, 220), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-            cv2.putText(frame, "-->",(135,300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-            cv2.putText(frame, "Easy --- Enter", (175, 300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-            cv2.putText(frame, "Medium --- \'m\'", (175, 350), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-            cv2.putText(frame, "Hard --- \'h\'", (175, 400), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, 'Select a difficulty:', (140, 220), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "-->",(135,300), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Easy --- Enter", (175, 300), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Medium --- \'m\'", (175, 350), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Hard --- \'h\'", (175, 400), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             self.difficulty = 0
             while True:
@@ -430,41 +439,41 @@ class Game():
                     break
                 elif key == ord('e'):
                     frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
-                    cv2.putText(frame, 'Select a difficulty:', (140, 220), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, 'Select a difficulty:', (140, 220), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     self.difficulty = 0
-                    cv2.putText(frame, "-->",(135,300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-                    cv2.putText(frame, "Easy --- Enter", (175, 300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-                    cv2.putText(frame, "Medium --- \'m\'", (175, 350), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-                    cv2.putText(frame, "Hard --- \'h\'", (175, 400), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "-->",(135,300), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Easy --- Enter", (175, 300), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Medium --- \'m\'", (175, 350), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Hard --- \'h\'", (175, 400), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.imshow(WINDOWNAME, frame)
                 elif key == ord('m'):
                     frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
-                    cv2.putText(frame, 'Select a difficulty:', (140, 220), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, 'Select a difficulty:', (140, 220), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     self.difficulty = 1
-                    cv2.putText(frame, "-->",(135,350), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-                    cv2.putText(frame, "Easy --- \'e\'", (175, 300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-                    cv2.putText(frame, "Medium --- Enter", (175, 350), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-                    cv2.putText(frame, "Hard --- \'h\'", (175, 400), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "-->",(135,350), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Easy --- \'e\'", (175, 300), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Medium --- Enter", (175, 350), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Hard --- \'h\'", (175, 400), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.imshow(WINDOWNAME, frame)
                 elif key == ord('h'):
                     frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
-                    cv2.putText(frame, 'Select a difficulty:', (140, 220), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, 'Select a difficulty:', (140, 220), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     self.difficulty = 2
-                    cv2.putText(frame, "-->",(135,400), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-                    cv2.putText(frame, "Easy --- \'e\'", (175, 300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-                    cv2.putText(frame, "Medium --- \'m\'", (175, 350), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-                    cv2.putText(frame, "Hard --- Enter", (175, 400), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "-->",(135,400), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Easy --- \'e\'", (175, 300), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Medium --- \'m\'", (175, 350), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Hard --- Enter", (175, 400), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.imshow(WINDOWNAME, frame)       
         elif screen_type == 'level':
             words = ['LEVEL ', '{}'.format(self.level_number)]        
             for word in words:
                 txt += word
-                cv2.putText(frame, txt, (140, 220), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                cv2.putText(frame, txt, (140, 220), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                 cv2.imshow(WINDOWNAME, frame)
                 while True:
                     if cv2.waitKey(500): 
                         break
-            cv2.putText(frame, "Press any key to start.", (140, 300), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Press any key to start.", (140, 300), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             while True:
                 key = cv2.waitKey(0)
@@ -477,15 +486,15 @@ class Game():
             words = ['Level End']
             for word in words:
                 txt += word
-                cv2.putText(frame, txt, (140, 220), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                cv2.putText(frame, txt, (140, 220), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                 cv2.imshow(WINDOWNAME, frame)
                 while True:
                     if cv2.waitKey(500): 
                         break
             if self.speed_up_used:
-                cv2.putText(frame, "DOUBLE POINTS!!", (140, 300), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-            cv2.putText(frame, "This round: {} points".format(points), (140, 350), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-            cv2.putText(frame, "Overall: {} points".format(self.user_score), (140, 400), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                cv2.putText(frame, "DOUBLE POINTS!!", (140, 300), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "This round: {} points".format(points), (140, 350), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Overall: {} points".format(self.user_score), (140, 400), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             while True:
                 key = cv2.waitKey(4000)
@@ -494,18 +503,18 @@ class Game():
                     exit(0)
                 break
         elif screen_type == 'pause':
-            cv2.putText(frame, 'Pause Screen', (140, 220), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-            cv2.putText(frame, "Main Menu --- Enter", (175, 300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-            cv2.putText(frame, "Exit --- ESC Key", (175, 350), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-            cv2.putText(frame, "Un-pause ---- Double Tap Gesture", (175, 400), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-            cv2.putText(frame, "-->",(135,300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, 'Pause Screen', (140, 220), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Main Menu --- Enter", (175, 300), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Exit --- ESC Key", (175, 350), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Un-pause ---- Double Tap Gesture", (175, 400), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "-->",(135,300), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             if DEBUG == 3:
                 return cv2.waitKey(0)
         elif screen_type == 'room':
-            cv2.putText(frame, "Enter a room code:",(115,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Enter a 6-character room code:",(115,220), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             for i in range(len(self.room)):
-                cv2.putText(frame, self.room[i], (115+ 20*i,300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                cv2.putText(frame, self.room[i], (115+ 20*i,300), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             num = 0
 
@@ -514,25 +523,25 @@ class Game():
                 if key == ESC_KEY:
                     self.__del__()
                     exit(0)
-                elif num >= len(self.room) and key == ENTER_KEY:
+                elif num == len(self.room) and key == ENTER_KEY:
                     return # go to aws creation
                 else:
-                    if num >= len(self.room):
-                        continue
                     if key == BACK_KEY:
-                        self.room[num] = '*'
                         if num > 0:
                             num -= 1
+                        self.room[num] = '*'
+                    elif num >= len(self.room):
+                        continue
                     elif chr(key)!= '*':
                         self.room[num] = chr(key)
                         num += 1
                     frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
-                    cv2.putText(frame, "Enter a room code:",(115,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Enter a 6-character room code:",(115,220), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     for i in range(len(self.room)):
-                        cv2.putText(frame, self.room[i], (115+ 20*i,300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                        cv2.putText(frame, self.room[i], (115+ 20*i,300), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.imshow(WINDOWNAME, frame)
         elif screen_type == 'nickname':
-            cv2.putText(frame, "Nickname:",(115,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Nickname:",(115,220), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             while True:
                 key = cv2.waitKey(0)
@@ -549,14 +558,14 @@ class Game():
                     else: 
                         self.nickname.append(chr(key))
                     frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
-                    cv2.putText(frame, "Nickname:",(115,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Nickname:",(115,220), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     for i in range(len(self.nickname)):
-                        cv2.putText(frame, self.nickname[i], (115+ 20*i,300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                        cv2.putText(frame, self.nickname[i], (115+ 20*i,300), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.imshow(WINDOWNAME, frame)
             return
         elif screen_type == 'no_room':
-            cv2.putText(frame, "Room {}".format(ROOM+''.join(self.room)),(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-            cv2.putText(frame, "does not exist. Please try again later.",(140,240), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Room {}".format(ROOM+''.join(self.room)),(140,220), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "does not exist. Please try again later.",(140,240), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             while True:
                 key = cv2.waitKey(0)
@@ -566,7 +575,7 @@ class Game():
                 elif key == ENTER_KEY:
                     self.multiplayer()
         elif screen_type == 'could_not_create':
-            cv2.putText(frame, "Could not create room. Please try again.".format(ROOM+''.join(self.room)),(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Could not create room. Please try again.".format(ROOM+''.join(self.room)),(140,220), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             while True:
                 key = cv2.waitKey(0)
@@ -576,9 +585,9 @@ class Game():
                 elif key == ENTER_KEY:
                     self.multiplayer()
         elif screen_type == 'password':
-            cv2.putText(frame, "Enter the room password:",(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Enter the room password:",(140,220), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             for i in range(len(self.room)):
-                cv2.putText(frame, self.room[i], (130+ 20*i,300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                cv2.putText(frame, self.room[i], (130+ 20*i,300), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             num = 0
             while True:
@@ -596,30 +605,43 @@ class Game():
                     else: 
                         self.nickname.append(chr(key))    
                     frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
-                    cv2.putText(frame, "Enter the room password:",(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "Enter the room password:",(140,220), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     for i in range(len(self.password)):
-                        cv2.putText(frame, '*', (115+ 20*i,300), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                        cv2.putText(frame, '*', (115+ 20*i,300), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.imshow(WINDOWNAME, frame)
             return
         elif screen_type == 'start_game_multi':
-            cv2.putText(frame, "Press Enter to Start the Game".format(ROOM+''.join(self.room)),(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Press Enter to Start the Game".format(ROOM+''.join(self.room)),(140,220), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             while True:
-                key = cv2.waitKey(0)
+                frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
+                i = 0
+                for key, value in self.users.items():
+                    cv2.putText(frame, "{} is in the lobby.".format(value),(200,240+i*25), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                    i += 1
+                cv2.putText(frame, "Press Enter to Start the Game".format(ROOM+''.join(self.room)),(140,220), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                cv2.imshow(WINDOWNAME, frame)
+                key = cv2.waitKey(10)
                 if key == ESC_KEY:
                     self.__del__()
                     exit(0)
                 elif key == ENTER_KEY:
                     # send an update to everybody 
                     # game start 
+                    if self.num_users < 1:
+                        continue
                     packet = {
                         "username": ''.join(self.nickname),
                         "start_mult": True
                     }
                     self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
+                    f = open("do_not_join.txt", "w")
+                    f.write('do not join')
+                    f.close()
+                    self.client_aws.upload_file('do_not_join.txt', self.room_name, "do_not_join.txt")
                     return
         elif screen_type == 'waiting_for_creator':
-            cv2.putText(frame, "Please wait for creator to start the game".format(ROOM+''.join(self.room)),(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Please wait for creator to start the game".format(ROOM+''.join(self.room)),(140,220), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             while True:
                 key = cv2.waitKey(10)
@@ -630,23 +652,19 @@ class Game():
                     return
                 pass
         elif screen_type == 'waiting_for_new_pose':
-            cv2.putText(frame, "Please wait, assigning new leader.",(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Please wait, assigning new leader.",(140,220), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             start_time = time.perf_counter()
-            while True: #while in this loop, we're waiting for pose leader 
+            while self.next_leader == 0: #while in this loop, we're waiting for pose leader 
                 key = cv2.waitKey(10)
                 if key == ESC_KEY:
                     self.__del__()
                     exit(0)
-                time_elapsed = int(time.perf_counter() - start_time)
-                time_remaining = 2 - time_elapsed
-                cv2.imshow(WINDOWNAME, frame)
-                if time_remaining <= 0: 
-                    break
                 
+            self.next_leader = 0
             frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
             txt = ''
-            cv2.putText(frame, "Please wait for user {} to create a pose".format(self.pose_leader),(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Please wait for user {} to create a pose".format(self.pose_leader),(140,220), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             while True: #while in this loop, we're waiting for pose leader 
                 key = cv2.waitKey(10)
@@ -661,13 +679,15 @@ class Game():
                         frame = cv2.flip(frame, 1)
                         original = np.copy(frame)
                         time_elapsed = int(time.perf_counter() - start_time)
-                        time_remaining = 5 - time_elapsed
+                        time_remaining = 10 - time_elapsed
                         contour_weight = 1
                         contour, _ = self.PoseEstimator.getContourFromPoints(self.pose)
                         contour = cv2.bitwise_not(contour)
                         frame = cv2.addWeighted(frame,self.uservid_weight,contour,contour_weight,0)
+                        cv2.putText(frame, "Time Remaining: {}".format(time_remaining), (10, 50), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                        # cv2.putText(frame, "Score: {}".format(self.user_score), (500, 50), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                         cv2.imshow(WINDOWNAME, frame)
-                        if time_remaining <= 0: 
+                        if time_remaining <= -1: 
                             original, points = self.PoseEstimator.getSkeleton(original)
                             self.level_score = self.PoseDetector.isWithinContour(points, contour)
                             for pair in self.PoseEstimator.POSE_PAIRS:
@@ -696,30 +716,42 @@ class Game():
                     return
                 pass    
         elif screen_type == 'level_end_multi':
-            cv2.putText(frame,'Your score is {}'.format(self.level_score), (140, 220), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame,'Your score is {}'.format(self.level_score), (140, 220), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
+            start_time = time.perf_counter()
             while True:
+                if self.creator == 1:
+                    time_elapsed = int(time.perf_counter() - start_time)
+                    time_remaining = 60 - time_elapsed
+                    if time_remaining <= -1: 
+                        packet = {
+                            "username": ''.join(self.nickname),
+                            "player_left": 1
+                        }
+                        self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
                 key = cv2.waitKey(10)
                 if key == ESC_KEY:
                     self.__del__()
                     exit(0)
-                if self.next_leader == 1:
+                if self.score_received == 1:
                     time.sleep(2)
                     frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
-                    cv2.putText(frame,'Scoreboard:'.format(self.level_score), (120, 120), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame,'Scoreboard:'.format(self.level_score), (120, 120), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     i = 0 
                     for key, value in self.total_scores.items():
-                        cv2.putText(frame,'{}: {}'.format(key, value), (120, 140 + 20*i), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                        cv2.putText(frame,'{}: {}'.format(key, value), (120, 140 + 20*i), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                         i += 1 
                     cv2.imshow(WINDOWNAME, frame)
                     cv2.waitKey(2000)
-                    self.next_leader = 0
+                    self.score_received = 0
                     return
                 if self.move_on == 1 and self.creator == 1:
                     return
         elif screen_type == 'waiting_for_others_pose':
-            cv2.putText(frame, "Waiting for other users to match your pose",(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+            self.next_leader = 0
+            cv2.putText(frame, "Waiting for other users to match your pose",(140,220), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
+            start_time = time.perf_counter()
             while True: #while in this loop, we're waiting for pose leader 
                 key = cv2.waitKey(10)
                 if key == ESC_KEY:
@@ -727,19 +759,28 @@ class Game():
                     exit(0)
                 if self.waiting_for_others == 0: #we're no longer waiting --> signify end of turn
                     return
+                if self.creator == 1 and self.waiting_for_others == 1:
+                    time_elapsed = int(time.perf_counter() - start_time)
+                    time_remaining = 60 - time_elapsed
+                    if time_remaining <= -1: 
+                        packet = {
+                            "username": ''.join(self.nickname),
+                            "player_left": 1
+                        }
+                        self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
                 pass    
         elif screen_type == 'tutorial':
             phrases = ["Welcome to Hole in the Wall!",
             "To play, you'll need:", 
             "   - a laptop with front facing camera & microphone", 
-            "   - Raspberry Pi & IMU", "   - Internet conneciton", 
-            "and you're ready to go!",
+            "   - Raspberry Pi & IMU", "   - Internet connection", 
+            "...and you're ready to go!",
             "",
             "",
             "Press Enter to go to the Rules page"]
             i = 0
             for phrase in phrases:
-                cv2.putText(frame, phrase,(100, 140 + i*25), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                cv2.putText(frame, phrase,(100, 140 + i*25), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                 i += 1
             cv2.imshow(WINDOWNAME, frame)
             while True: #while in this loop, we're waiting for pose leader 
@@ -751,15 +792,16 @@ class Game():
                     self.show_screen('tutorial2')
         elif screen_type == 'tutorial2':
             phrases = ["Rules:",
-            "- Timer in the top left corner will indicate how much time you have left.", 
-            "- The screen will get more opaque as time goes on to indicate where the hole is.", 
-            "- To score more points, fit your body in the hole as accurately as you can when the timer hits zero.",
+            "- Timer in the top left corner indicates time remaining.", 
+            "- The screen shows the hole you must fit your body in.", 
+            "- Fit your body in the hole before the clock hits ZERO!",
+            "- The better you fit, the higher your score.",
             "",
             "",
             "Press Enter to go to the Power Ups page"]
             i = 0
             for phrase in phrases:
-                cv2.putText(frame, phrase,(100, 140 + i*25), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                cv2.putText(frame, phrase,(100, 140 + i*25), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                 i += 1
             cv2.imshow(WINDOWNAME, frame)
             while True: #while in this loop, we're waiting for pose leader 
@@ -772,7 +814,8 @@ class Game():
         elif screen_type == 'tutorial3':
             phrases = ["Powerups:",
             "- Extend the Deadline: doubles the timer", 
-            "- Double Points: instantly takes a picture and ends the round, but you get double points",
+            "- Double Points: ends the round and gives you double points",
+            "                  for your pose.",
             "",
             "",
             "Press Enter to go to the Calibration page"]#, 
@@ -781,7 +824,7 @@ class Game():
 
             i = 0
             for phrase in phrases:
-                cv2.putText(frame, phrase,(100, 140 + i*25), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                cv2.putText(frame, phrase,(100, 140 + i*25), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                 i += 1
             cv2.imshow(WINDOWNAME, frame)
             while True: #while in this loop, we're waiting for pose leader 
@@ -794,14 +837,16 @@ class Game():
         elif screen_type == 'tutorial4':
             phrases = ["Calibration:",
             "Now, we will help you calibrate your camera.", 
-            "Please tilt your camera or stand farther away to fit within this test contour!",
+            "",
+            "Please tilt your camera or stand further away to fit",
+            "within the test contour!",
             "",
             "",
             "Press Enter to start calibrating"]
 
             i = 0
             for phrase in phrases:
-                cv2.putText(frame, phrase,(100, 140 + i*25), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+                cv2.putText(frame, phrase,(100, 140 + i*25), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                 i += 1
             cv2.imshow(WINDOWNAME, frame)
             while True: #while in this loop, we're waiting for pose leader 
@@ -815,7 +860,7 @@ class Game():
                     self.game() 
                     return
         elif generic_txt != '':
-            cv2.putText(frame, "{}".format(generic_txt),(140,220), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "{}".format(generic_txt),(140,220), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             while True: #while in this loop, we're waiting for pose leader 
                 if no_enter == 1: 
@@ -828,7 +873,6 @@ class Game():
                     return
                 pass    
     def calibrate(self):
-        #print('hello')
         contour = cv2.imread(PATH + 'test.jpg')
         contour = cv2.bitwise_not(contour)
         valid_config = 0
@@ -836,7 +880,7 @@ class Game():
             start_time = int(time.perf_counter())
             while True:
                 time_elapsed = int(time.perf_counter()-start_time)
-                time_remaining = 5 - time_elapsed
+                time_remaining = 10 - time_elapsed
                 key = cv2.waitKey(1)
                 if key == ESC_KEY:
                     self.__del__()
@@ -845,7 +889,8 @@ class Game():
                 frame = cv2.flip(frame, 1)
                 original = np.copy(frame)
                 frame = cv2.addWeighted(frame,self.uservid_weight,contour,1,0)
-                cv2.putText(frame, "Time Remaining: {}".format(time_remaining), (10, 50), FONT, .8, FONTCOLORBLACK, FONTSIZE, lineType=cv2.LINE_AA)
+                cv2.putText(frame, "Time Remaining: {}".format(time_remaining), (10, 50), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                cv2.putText(frame, "Step in the Contour.", (375, 50), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                 cv2.imshow(WINDOWNAME, frame)
                 if time_remaining <= -1:
                     ## check their pose 
@@ -861,9 +906,6 @@ class Game():
                         self.show_screen('',generic_txt='Calibration failed! Please try again.', no_enter = 1)
                     cv2.waitKey(2000)
                     break
-            
-
-            
 
     def editFrame(self, frame, start_time, contour, override_time = False):
         original = np.copy(frame)
@@ -903,11 +945,11 @@ class Game():
             powerup_fg = cv2.bitwise_and(powerup,powerup,mask = mask)
             dst = cv2.add(frame_bg,powerup_fg)
             frame[(row_1):(row_2), (col_1):(col_2) ] = dst
-            cv2.putText(frame, '{} x'.format(powerup_num_left), (640-110, 480-row_bias-20), FONT, .5, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, '{} x'.format(powerup_num_left), (640-110, 480-row_bias-20), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             num+=1
         
-        cv2.putText(frame, "Time Remaining: {}".format(time_remaining), (10, 50), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
-        cv2.putText(frame, "Score: {}".format(self.user_score), (500, 50), FONT, .8, FONTCOLOR, FONTSIZE, lineType=cv2.LINE_AA)
+        cv2.putText(frame, "Time Remaining: {}".format(time_remaining), (10, 50), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+        cv2.putText(frame, "Score: {}".format(self.user_score), (500, 50), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
         # print('time remaining', time_remaining)
         return frame, time_remaining, original
     
@@ -1018,15 +1060,18 @@ class Game():
             _, frame = self.cap.read()
             frame = cv2.flip(frame, 1)
             # frame, time_remaining, original = self.editFrame(frame, start_time, contour, override_time=override_time)
-            cv2.imshow(WINDOWNAME, frame)
+            
             time_elapsed = int(time.perf_counter() - start_time)
-            time_remaining = 5 - time_elapsed
-            if time_remaining <= 0: 
+            time_remaining = 10 - time_elapsed
+            cv2.putText(frame, "Time Remaining: {}".format(time_remaining), (10, 50), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Strike a pose!".format(time_remaining), (375, 50), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+
+            cv2.imshow(WINDOWNAME, frame)
+            if time_remaining <= -1: 
                 frame, points = self.PoseEstimator.getSkeleton(frame)
                 for pair in self.PoseEstimator.POSE_PAIRS:
                     point1 = points[pair[0]]
                     point2 = points[pair[1]]
-
                     if point1 and point2:
                         cv2.line(frame, tuple(point1), tuple(point2), (0, 255, 255), 2)
                         cv2.circle(frame, tuple(point1), 8, (0, 0, 255), thickness=-1, lineType=cv2.FILLED)
@@ -1063,6 +1108,7 @@ class Game():
                     self.send_pose()
                     self.waiting_for_others = 1
                     self.show_screen('waiting_for_others_pose')
+                    self.show_screen('level_end_multi')
                 else:
                     packet = {
                         "username": ''.join(self.nickname),
