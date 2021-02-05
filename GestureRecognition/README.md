@@ -26,7 +26,15 @@ See requirements.txt
 
 # Installation for Users 
 ```
-pip install pipreqs
-pip install -r requirements.txt
+cd GestureRecognition 
+./setup.sh
+```
+
+# Running the Game
+'
+```
+conda activate hitw
+python mqtt.py #single player 
+python mqtt.py -r *insert 6 character room code* -u *insert nickname* #multiplayer
 ```
 
