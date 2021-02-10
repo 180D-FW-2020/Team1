@@ -1,9 +1,12 @@
 import paho.mqtt.client as mqtt
 import json
 import sys
+import math
 from optparse import OptionParser
 from gesture_detector import * 
+
 connection_string = "ece180d-team1-room-"
+accel_thres = 200
 
 usage_msg = '''%prog [mode] [username] [roomcode - multiplayer only]
 connect using username and roomcode from main game.'''
@@ -35,7 +38,7 @@ elif options.roomcode == '' and options.mode == 'm':
     if options.roomcode == '':
         parser.error("Please enter roomcode for multiplayer mode.")
     
-if options.mode != 's' or options.mode != 'm': 
+if options.mode != 's' and options.mode != 'm': 
     parser.error("Please select a valid mode: single player \'s\' or multiplayer \'m\'")
 
 # 0. define callbacks - functions that run when events happen.
@@ -83,19 +86,41 @@ client.loop_start()
 
 # print(username, roomcode, connection_string)
 
+print("Calibrating acceleration... ")
+
+count = 0 
+accel_base = 0 
+
+start = datetime.datetime.now()
+elapsed_ms = 0
+previous_elapsed_ms = 0
+
+while elapsed_ms < 1.5 * 1000 * 3:
+    begin = [] + n.collect()
+    accel_base += (abs(begin[0]) + abs(begin[1]) + abs(begin[2])) / 3
+    previous_elapsed_ms = elapsed_ms
+    elapsed_ms = (datetime.datetime.now() - start).total_seconds() * 1000
+    count += 1
+
+accel_base = accel_base/count 
+
+print("Base acceleration: " + str(accel_base))
+
 while True:
     #Example method for sending a gesture
-    # print("before")
-    prediction = n.classify()
-    # print(prediction)
-    if(prediction != "negative_trim" and last_classification != prediction): 
-        packet = {
-        "username": username,
-        "gesture": prediction
-        }
-        client.publish(connection_string, json.dumps(packet), qos=1)
-    # print("after")
-    last_classification = prediction
+    check = [] + n.collect() 
+    accel_sum = (abs(check[0]) + abs(check[1]) + abs(check[2])) / 3
+    if(accel_sum - accel_base > accel_thres): 
+        print("Detected motion...")
+        prediction = n.classify()
+        # print(prediction)
+        if(prediction != "negative_trim" and last_classification != prediction): 
+            packet = {
+            "username": username,
+            "gesture": prediction
+            }
+            client.publish(connection_string, json.dumps(packet), qos=1)
+        last_classification = prediction
     pass
 
 # use subscribe() to subscribe to a topic and receive messages.

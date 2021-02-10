@@ -11,7 +11,7 @@ import joblib
 import subprocess
 import shlex
 
-model = joblib.load('./models/310pt_model.joblib') 
+model = joblib.load('./models/267pt_model.joblib') 
 
 CHECK_TIME_INCREMENT_MS = 200
 SAMPLE_SIZE_MS = 1500
@@ -184,27 +184,30 @@ class gestureRecognizer:
     def classify(self): 
         global model, CHECK_TIME_INCREMENT_MS
 
-        row = [self.elapsed_ms, int(self.elapsed_ms - self.previous_elapsed_ms)] + self.collect()
-        self.data.append(row)
-        self.previous_elapsed_ms = self.elapsed_ms
+        while True: 
+            row = [self.elapsed_ms, int(self.elapsed_ms - self.previous_elapsed_ms)] + self.collect()
+            self.data.append(row)
+            self.previous_elapsed_ms = self.elapsed_ms
 
-        if self.elapsed_ms - self.last_classified >= CHECK_TIME_INCREMENT_MS and len(self.data) == self.maxlen:
-            df = pd.DataFrame(list(self.data), columns=self.header)
-            features = utils.get_model_features(df) + [0]
-            # for i in features: 
-            #     print(i)
-            prediction = model.predict([features])[0]
+            if self.elapsed_ms - self.last_classified >= CHECK_TIME_INCREMENT_MS and len(self.data) == self.maxlen:
+                df = pd.DataFrame(list(self.data), columns=self.header)
+                features = utils.get_model_features(df) + [0]
+                # for i in features: 
+                #     print(i)
+                prediction = model.predict([features])[0]
 
-            #print(int(elapsed_ms), prediction)
-            if prediction != 'negative_trim' and self.last_classification != prediction:
-                print("========================>", prediction)
-            
-            self.data.clear()
+                #print(int(elapsed_ms), prediction)
+                if prediction != 'negative_trim' and self.last_classification != prediction:
+                    print("========================>", prediction)
+                
+                self.data.clear()
 
-            self.last_classified = self.elapsed_ms
-            self.last_classification = prediction
+                self.last_classified = self.elapsed_ms
+                self.last_classification = prediction 
+                
+                break 
 
-        self.elapsed_ms = (datetime.datetime.now() - self.start).total_seconds() * 1000
+            self.elapsed_ms = (datetime.datetime.now() - self.start).total_seconds() * 1000
 
         return str(self.last_classification)
 
