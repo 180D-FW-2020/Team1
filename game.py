@@ -6,7 +6,6 @@ overall handler for the output to user
 from PoseEstimation import *
 from ContourDetection import *
 from voice import *
-# from mqtt import *
 import cv2
 import time 
 import numpy as np
@@ -18,13 +17,9 @@ import boto3
 from botocore.config import Config
 from botocore.client import ClientError
 import key
-# OUTPUT = '.\output\\'
-# if os.path.isdir(OUTPUT) == False:
-#     os.makedir(OUTPUT)
+
 region='us-east-1'
 ROOM = 'ece180d-team1-room-'
-
-test_points = [(304, 88), (304, 136), (272, 160), (272, 216), (504, 152), (328, 152), (328, 232), (336, 264), (480, 192), (280, 368), (288, 416), (496, 192), (320, 368), (320, 416), (420, 420)]
 
 FONTCOLORWHITE = (255,255,255)
 FONTCOLORBLACK = (0,0,0)
@@ -34,10 +29,7 @@ FONTSIZE = 1
 
 ACCESS_KEY = key.ACCESS_KEY
 SECRET_KEY = key.SECRET_KEY
-# mfile.write("Hello World!")
-# mfile.close()
 
-# MQTT connection string
 connection_string = "ece180d/team1"
 
 # 1 to see all the contours, 2 to see the points after contour detection, 3 for testing the pause button
@@ -243,6 +235,8 @@ class Game():
         if "round_over" in packet: # creator sends this across when the round is over --> don't keep waiting for others now
             self.waiting_for_others = 0
             self.move_on = 1
+            if self.pose_leader == ''.join(self.nickname):
+                self.level_score = packet["round_over"]
         if "gesture" in packet:
             print(packet["gesture"])
             self.on_gesture(packet["gesture"])
@@ -263,12 +257,17 @@ class Game():
             if len(self.round_scores) == self.num_users:
                 ## round is over 
                 self.move_on = 1
+                total = 0 
+                for key, value in round_scores:
+                    total += value 
+                total = 15 - (total/self.num_users)
+                self.total_scores[self.pose_leader] += total 
                 """
                 implement csv logic here
                 """
                 packet = {
                     "username": ''.join(self.nickname),
-                    "round_over": 1,
+                    "round_over": total,
                     "scoreboard": self.total_scores
                 }
                 self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
@@ -1043,6 +1042,7 @@ class Game():
     def singleplayer(self):
         while self.difficulty == -1:
             self.show_screen('difficulty')
+        self.client_mqtt.subscribe(ROOM, qos=1)
         while True:
             self.level_number += 1
             self.slow_down_used = False
