@@ -6,21 +6,34 @@ We are implementing a virtual version of [Hole in the Wall](https://www.youtube.
 # Dependencies 
 See requirements.txt
 
-# Installation for Users 
+# Installation for Users
+Clone our [repo](https://github.com/180D-FW-2020/Team1). 
+Download our trained dnn model [pose_iter_160000.caffemodel](https://drive.google.com/file/d/1opfbTlgxeEw4yokoNndD36NVYGc8c0Xe/view?usp=sharing). 
+ 
 ```
-pip install pipreqs
-pip install -r requirements.txt
+./setup.sh
+conda activate hitw
+pip install pipwin 
+pipwin install pyaudio
 ```
 
 # Running the Game
 On your laptop:
 ```
+conda activate hitw
 python game.py
 ```
 On the Raspberry Pi:
 ```
-python mqtt.py
+cd GestureRecognition 
+./setup.sh
+conda activate hitw
+python mqtt.py #single player 
+python mqtt.py -r *insert 6 character room code* -u *insert nickname* #multiplayer
 ```
+
+# User Manual 
+Read our [User Manual](https://docs.google.com/document/d/1mSSGqndTtNvM9dn26AQYYy9mmHIH6x1cDG8x9IvnCus/edit?usp=sharing) for more details on how to play the game! 
 
 # Source Code Descriptions:
 | File | Description |
