@@ -7,6 +7,8 @@ import os
 import pandas as pd 
 import utils 
 
+accel_thres = 200
+
 SAMPLE_RATE_HZ = 100
 QUATERNION_SCALE = (1.0 / (1<<14))
 
@@ -170,20 +172,48 @@ duration_s = float(input("Please input how long should a sensor trace be in seco
 
 i = starting_index
 
+print("Calibrating acceleration... ")
+
+count = 0 
+accel_base = 0 
+
+start = datetime.datetime.now()
+elapsed_ms = 0
+previous_elapsed_ms = 0
+
+while elapsed_ms < duration_s * 1000 * 3:
+    begin = [] + collect()
+    accel_base += (abs(begin[0]) + abs(begin[1]) + abs(begin[2])) / 3
+    previous_elapsed_ms = elapsed_ms
+    elapsed_ms = (datetime.datetime.now() - start).total_seconds() * 1000
+    count += 1
+
+accel_base = accel_base/count 
+
+print("Base acceleration: " + str(accel_base))
+
+print("Collecting file " + str(i)+ ". Make a movement continue...")
+
 while True:
-    input("Collecting file " + str(i)+ ". Press Enter to continue...")
-    start = datetime.datetime.now()
-    elapsed_ms = 0
-    previous_elapsed_ms = 0
+    check = [] + collect() 
+    accel_sum = (abs(check[0]) + abs(check[1]) + abs(check[2])) / 3
+    if(accel_sum - accel_base > accel_thres): 
+        print("Motion detected, Acceleration: " + str(accel_sum)) 
+        print("Acceleration change: " + str(accel_sum - accel_base))
+        # input("Collecting file " + str(i)+ ". Press Enter to continue...")
+        start = datetime.datetime.now()
+        elapsed_ms = 0
+        previous_elapsed_ms = 0
 
-    data = []
-    while elapsed_ms < duration_s * 1000:
-        row = [elapsed_ms, int(elapsed_ms - previous_elapsed_ms)] + collect() # heading, roll, pitch, sys, gyro, accel, mag]
-        data.append(row)
-        previous_elapsed_ms = elapsed_ms
-        elapsed_ms = (datetime.datetime.now() - start).total_seconds() * 1000
+        data = []
+        while elapsed_ms < duration_s * 1000:
+            row = [elapsed_ms, int(elapsed_ms - previous_elapsed_ms)] + collect() # heading, roll, pitch, sys, gyro, accel, mag]
+            data.append(row)
+            previous_elapsed_ms = elapsed_ms
+            elapsed_ms = (datetime.datetime.now() - start).total_seconds() * 1000
 
-    file_name = filename + "/" + filename + '{0:03d}'.format(i) + ".csv"
-    df = pd.DataFrame(data, columns = header)
-    df.to_csv(file_name, header=True)
-    i += 1
+        file_name = filename + "/" + filename + '{0:03d}'.format(i) + ".csv"
+        df = pd.DataFrame(data, columns = header)
+        df.to_csv(file_name, header=True)
+        i += 1
+        print("Collecting file " + str(i)+ ". Make a movement continue...")
