@@ -18,6 +18,8 @@ from botocore.config import Config
 from botocore.client import ClientError
 import key
 
+
+random.seed(69)
 region='us-east-1'
 ROOM = 'ece180d-team1-room-'
 
@@ -178,6 +180,20 @@ class Game():
         self.pose_leader = ''
         self.round_scores = {} # creator keeps track of who got what score that specific round -- emptied after each round ends 
         self.total_scores = {} # creator keeps track of who has what score ovreal -- never empties 
+        self.multi_powerups = ['double_points', 'mirror', 'lights_out']
+        """ powerup list for multiplayer:
+        1. double_points: for pose leader -- gets 2*(15-average of other people's scores) for the round
+        2. mirror: mirror's posers' camera and contour 
+        3. lights_out: blacks out posers' camera
+        """
+        self.multi_gesture_names = ['double tap','tap','wave']
+        self.multi_description = ['Hopefully your pose was too hard for em!',
+        'You mirrored your opponents\' screens!',
+        'You turned off their cameras!'
+        ]
+        self.current_powerup = ''
+        self.current_description = ''
+        self.powerup_used = 0
         # @NOTE indexing should be same for round_scores and total_scores
     # start mqtt 
     def on_connect(self, client, userdata, flags, rc):
@@ -190,31 +206,42 @@ class Game():
             print('Expected Disconnect')
 
     def on_gesture(self,gesture):
-        if gesture == 'wave':
-            # add 1 to activate powerup count 
-            if self.play == False:
-                return
-            if self.powerup_vals[power_up_file_names[0]] < 3:
-                self.powerup_vals[power_up_file_names[0]] += 1
-            else:
-                pass # try to add more points for the level 
-        elif gesture == 'tap':
-            # add 1 to help powerup count 
-            if self.play == False:
-                return
-            if self.powerup_vals[power_up_file_names[1]] < 3:
-                self.powerup_vals[power_up_file_names[1]] += 1
-            else:
-                pass # try to add more points for the level 
-        elif gesture == 'double_tap':
-            # pause/un-pause
-            if self.play:
-                self.play = False
-                self.reset_timer = time.perf_counter()
-            else:
-                self.play = True
-                self.TIMER_THRESHOLD += int(time.perf_counter() - self.reset_timer)
-                self.reset_timer = -1
+        if self.mode == 0:
+            if gesture == 'wave':
+                # add 1 to activate powerup count 
+                if self.play == False:
+                    return
+                if self.powerup_vals[power_up_file_names[0]] < 3:
+                    self.powerup_vals[power_up_file_names[0]] += 1
+                else:
+                    pass # try to add more points for the level 
+            elif gesture == 'tap':
+                # add 1 to help powerup count 
+                if self.play == False:
+                    return
+                if self.powerup_vals[power_up_file_names[1]] < 3:
+                    self.powerup_vals[power_up_file_names[1]] += 1
+                else:
+                    pass # try to add more points for the level 
+            elif gesture == 'double_tap':
+                # pause/un-pause
+                if self.play:
+                    self.play = False
+                    self.reset_timer = time.perf_counter()
+                else:
+                    self.play = True
+                    self.TIMER_THRESHOLD += int(time.perf_counter() - self.reset_timer)
+                    self.reset_timer = -1
+        else: 
+            if gesture == 'wave':
+                if self.current_powerup == 'lights_out':
+                    self.powerup_used = 1
+            elif gesture == 'tap':
+                if self.current_powerup == 'mirror':
+                    self.powerup_used = 1
+            elif gesture == 'double_tap':
+                if self.current_powerup == 'double_points':
+                    self.powerup_used = 1
 
     def on_message(self, client, userdata, message):
         print('Received message: "' + str(message.payload) + '" on topic "' +
@@ -258,7 +285,7 @@ class Game():
                 ## round is over 
                 self.move_on = 1
                 total = 0 
-                for key, value in round_scores:
+                for key, value in self.round_scores.items():
                     total += value 
                 total = 15 - (total/self.num_users)
                 self.total_scores[self.pose_leader] += total 
@@ -749,6 +776,9 @@ class Game():
         elif screen_type == 'waiting_for_others_pose':
             self.next_leader = 0
             cv2.putText(frame, "Waiting for other users to match your pose",(140,220), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+            if self.powerup_used == 1:
+                cv2.putText(frame, "{} powerup used!",(140,240), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                cv2.putText(frame, "{}".format(self.current_description),(140,260), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             start_time = time.perf_counter()
             while True: #while in this loop, we're waiting for pose leader 
@@ -1053,8 +1083,13 @@ class Game():
                 self.TIMER_THRESHOLD -= 2
     def send_pose(self):
         ## include screen to say "you're up"
+        self.powerup_used = 0 # set this when powerup is used
         self.move_on = 0
         start_time = time.perf_counter()
+        pose_num = random.randint(0,2)
+        gesture_name = self.multi_gesture_names[pose_num]
+        self.current_powerup = self.multi_powerups[pose_num]
+        self.current_description = self.multi_description[pose_num]
         while self.send_my_pose == 1: 
             key = cv2.waitKey(1)
             _, frame = self.cap.read()
@@ -1065,7 +1100,7 @@ class Game():
             time_remaining = 10 - time_elapsed
             cv2.putText(frame, "Time Remaining: {}".format(time_remaining), (10, 50), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.putText(frame, "Strike a pose!".format(time_remaining), (375, 50), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
-
+            cv2.putText(frame, "Do the {} gesture to get the {} powerup!".format(gesture_name,self.current_powerup), (10, 350), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             if time_remaining <= -1: 
                 frame, points = self.PoseEstimator.getSkeleton(frame)
