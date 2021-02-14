@@ -261,6 +261,7 @@ class Game():
                 self.send_my_pose = 0 
         if "round_over" in packet: # creator sends this across when the round is over --> don't keep waiting for others now
             self.waiting_for_others = 0
+            self.current_powerup = ''
             self.move_on = 1
             if self.pose_leader == ''.join(self.nickname):
                 self.level_score = packet["round_over"]
@@ -269,6 +270,7 @@ class Game():
             self.on_gesture(packet["gesture"])
         if "send_my_pose" in packet and user != ''.join(self.nickname):
             self.pose_updated = 1
+            self.current_powerup = packet["send_my_pose"] 
             self.pose = packet["pose"]
             print(type(self.pose))
             print(packet["pose"])
@@ -288,6 +290,8 @@ class Game():
                 for key, value in self.round_scores.items():
                     total += value 
                 total = int(15 - (total/self.num_users))
+                if self.current_powerup == 'double_points':
+                    total *= 2
                 self.total_scores[self.pose_leader] += total 
                 """
                 implement csv logic here
@@ -702,14 +706,20 @@ class Game():
                     while True:
                         key = cv2.waitKey(1)
                         _, frame = self.cap.read()
-                        frame = cv2.flip(frame, 1)
+                        if self.current_powerup != 'mirror':
+                            frame = cv2.flip(frame, 1)
                         original = np.copy(frame)
                         time_elapsed = int(time.perf_counter() - start_time)
                         time_remaining = 10 - time_elapsed
                         contour_weight = 1
                         contour, _ = self.PoseEstimator.getContourFromPoints(self.pose)
                         contour = cv2.bitwise_not(contour)
-                        frame = cv2.addWeighted(frame,self.uservid_weight,contour,contour_weight,0)
+                        if self.current_powerup == 'mirror':
+                            contour = cv2.flip(contour,1)
+                        if self.current_powerup == 'lights_out':
+                            frame = cv2.addWeighted(frame,.5,contour,contour_weight,0)
+                        else:
+                            frame = cv2.addWeighted(frame,self.uservid_weight,contour,contour_weight,0)
                         cv2.putText(frame, "Time Remaining: {}".format(time_remaining), (10, 50), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                         # cv2.putText(frame, "Score: {}".format(self.user_score), (500, 50), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                         cv2.imshow(WINDOWNAME, frame)
@@ -1117,7 +1127,7 @@ class Game():
                 self.send_my_pose = 0
                 packet = {
                     "username": ''.join(self.nickname),
-                    "send_my_pose": 1,
+                    "send_my_pose": self.current_powerup,
                     "pose": points
                 }
                 self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
