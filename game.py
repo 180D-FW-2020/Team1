@@ -19,7 +19,7 @@ from botocore.client import ClientError
 import key
 
 
-random.seed(69)
+random.seed(0)
 region='us-east-1'
 ROOM = 'ece180d-team1-room-'
 
