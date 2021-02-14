@@ -191,6 +191,7 @@ class Game():
         'You mirrored your opponents\' screens!',
         'You turned off their cameras!'
         ]
+        self.generated_powerup = ''
         self.current_powerup = ''
         self.current_description = ''
         self.powerup_used = 0
@@ -1099,7 +1100,7 @@ class Game():
         start_time = time.perf_counter()
         pose_num = random.randint(0,2)
         gesture_name = self.multi_gesture_names[pose_num]
-        self.current_powerup = self.multi_powerups[pose_num]
+        self.generated_powerup = self.multi_powerups[pose_num]
         self.current_description = self.multi_description[pose_num]
         while self.send_my_pose == 1: 
             key = cv2.waitKey(1)
@@ -1111,7 +1112,7 @@ class Game():
             time_remaining = 10 - time_elapsed
             cv2.putText(frame, "Time Remaining: {}".format(time_remaining), (10, 50), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.putText(frame, "Strike a pose!".format(time_remaining), (375, 50), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
-            cv2.putText(frame, "Do the {} gesture to get the {} powerup!".format(gesture_name,self.current_powerup), (10, 350), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Do the {} gesture to get the {} powerup!".format(gesture_name,self.generated_powerup), (10, 350), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             if time_remaining <= -1: 
                 time_remaining = 0
