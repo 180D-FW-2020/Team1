@@ -287,7 +287,7 @@ class Game():
                 total = 0 
                 for key, value in self.round_scores.items():
                     total += value 
-                total = 15 - (total/self.num_users)
+                total = int(15 - (total/self.num_users))
                 self.total_scores[self.pose_leader] += total 
                 """
                 implement csv logic here
@@ -690,7 +690,7 @@ class Game():
             self.next_leader = 0
             frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
             txt = ''
-            cv2.putText(frame, "Please wait for user {} to create a pose".format(self.pose_leader),(140,220), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Please wait for {} to create a pose!".format(self.pose_leader),(140,220), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             while True: #while in this loop, we're waiting for pose leader 
                 key = cv2.waitKey(10)
@@ -714,6 +714,7 @@ class Game():
                         # cv2.putText(frame, "Score: {}".format(self.user_score), (500, 50), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                         cv2.imshow(WINDOWNAME, frame)
                         if time_remaining <= -1: 
+                            time_remaining = 0
                             original, points = self.PoseEstimator.getSkeleton(original)
                             self.level_score = self.PoseDetector.isWithinContour(points, contour)
                             for pair in self.PoseEstimator.POSE_PAIRS:
@@ -777,7 +778,7 @@ class Game():
             self.next_leader = 0
             cv2.putText(frame, "Waiting for other users to match your pose",(140,220), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             if self.powerup_used == 1:
-                cv2.putText(frame, "{} powerup used!",(140,240), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                cv2.putText(frame, "{} powerup used!".format(self.current_powerup),(140,240), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                 cv2.putText(frame, "{}".format(self.current_description),(140,260), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             start_time = time.perf_counter()
@@ -1103,6 +1104,7 @@ class Game():
             cv2.putText(frame, "Do the {} gesture to get the {} powerup!".format(gesture_name,self.current_powerup), (10, 350), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             if time_remaining <= -1: 
+                time_remaining = 0
                 frame, points = self.PoseEstimator.getSkeleton(frame)
                 for pair in self.PoseEstimator.POSE_PAIRS:
                     point1 = points[pair[0]]
