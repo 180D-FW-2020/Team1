@@ -119,8 +119,15 @@ class Game():
         
         # Voice
         self.command_dict = {   
-            "activate" : self.activate,
-            "slow down" : self.help
+            "easy" : self.change_diff,
+            "medium" : self.change_diff,
+            "hard" : self.change_diff,
+            "single" : self.change_mode,
+            "multi" : self.change_mode,
+            "tutorial" : self.change_mode,
+            "start" : self.enter_sent,
+            "enter" : self.enter_sent,
+            "begin" : self.enter_sent
         }
         self.voice = commandRecognizer(self.command_dict)
         self.voice.listen()
@@ -168,6 +175,7 @@ class Game():
         self.level_number = 0
         self.uservid_weight = 1
         self.mode = -1 # 0 for single player, 1 for multi player
+        self.enter_pressed = False
         self.difficulty = -1 # 0 for easy, 1 for medium, 2 for hard
         self.TIMER_THRESHOLD = 20
         self.play = False
@@ -339,21 +347,32 @@ class Game():
             }
             self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
 
-    def activate(self):
-        if self.play == False:
-            return
-        print("activate command called")
-        if self.powerup_vals[power_up_file_names[0]] > 0:
-            self.powerup_vals[power_up_file_names[0]] -= 1
-            self.speed_up_used = True
+    def change_diff(self, diff):
+        print("Change difficulty " + diff)
+        if diff == "easy":
+            self.difficulty = 0
+        elif diff == "medium":
+            self.difficulty = 1
+        elif diff == "hard":
+            self.difficulty = 2
+        print("difficulty: {}".format(self.difficulty))
 
-    def help(self):
-        if self.play == False:
-            return
-        print("help command called")   
-        if self.powerup_vals[power_up_file_names[1]] > 0:
-            self.powerup_vals[power_up_file_names[1]] -= 1
-            self.slow_down_used = True
+    
+    def change_mode(self, diff):
+        print("Change mode " + diff)
+        if diff == "single":
+            self.mode = 0
+        elif diff == "multi":
+            self.mode = 1
+        elif diff == "tutorial":
+            self.mode = 2
+        print("mode: {}".format(self.mode))
+
+    
+    def enter_sent(self, enter):
+        print("enter voiced")
+        self.enter_pressed = True
+
     def tutorial(self):
         ## tutorial
         print('hello')
@@ -380,18 +399,18 @@ class Game():
             cv2.imshow(WINDOWNAME, frame)
             
             while True:
-                key = cv2.waitKey(0)
+                key = cv2.waitKey(10)
                 if key == ESC_KEY:
                     self.__del__()
                     exit(0)
-                elif key == ENTER_KEY:
+                elif key == ENTER_KEY or self.enter_pressed == True:
+                    self.enter_pressed = False
                     if self.mode == -1:
                         self.mode = 0
                     break
-                elif key == ZERO_KEY:
-                    if self.mode == 0:
-                        continue
-                    self.mode = 0
+                elif key == ZERO_KEY or self.mode == 0:
+                    if self.mode!= 0:
+                        self.mode = 0
                     frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
                     cv2.putText(frame, txt, (140, 220), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.putText(frame, "Single Player Mode --- Enter", (175, 300), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
@@ -399,10 +418,9 @@ class Game():
                     cv2.putText(frame, "Tutorial --- 2", (175, 400), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.putText(frame, "-->",(135,300), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.imshow(WINDOWNAME, frame)
-                elif key == ONE_KEY:
-                    if self.mode == 1:
-                        continue
-                    self.mode = 1
+                elif key == ONE_KEY or self.mode == 1:
+                    if self.mode!= 1:
+                        self.mode = 1
                     frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
                     cv2.putText(frame, txt, (140, 220), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.putText(frame, "Single Player Mode --- 0", (175, 300), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
@@ -410,10 +428,9 @@ class Game():
                     cv2.putText(frame, "Tutorial --- 2", (175, 400), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.putText(frame, "-->",(135,350), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.imshow(WINDOWNAME, frame)
-                elif key == TWO_KEY:
-                    if self.mode == 2:
-                        continue
-                    self.mode = 2
+                elif key == TWO_KEY or self.mode == 2:
+                    if self.mode!= 2:
+                        self.mode = 2
                     frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
                     cv2.putText(frame, txt, (140, 220), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.putText(frame, "Single Player Mode --- 0", (175, 300), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
@@ -431,34 +448,39 @@ class Game():
             cv2.imshow(WINDOWNAME, frame)
             self.difficulty = 0
             while True:
-                key = cv2.waitKey(0)
+                key = cv2.waitKey(10)
                 if key == ESC_KEY:
                     self.__del__()
                     exit(0)
-                elif key == ENTER_KEY:
+                elif key == ENTER_KEY or self.enter_pressed == True:
+                    self.enter_pressed = False
                     break
                 elif key == ord('e'):
+                    self.difficulty = 0
+                elif key == ord('m'):
+                    self.difficulty = 1
+                elif key == ord('h'):
+                    self.difficulty = 2
+
+                if self.difficulty == 0:
                     frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
                     cv2.putText(frame, 'Select a difficulty:', (140, 220), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
-                    self.difficulty = 0
                     cv2.putText(frame, "-->",(135,300), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.putText(frame, "Easy --- Enter", (175, 300), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.putText(frame, "Medium --- \'m\'", (175, 350), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.putText(frame, "Hard --- \'h\'", (175, 400), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.imshow(WINDOWNAME, frame)
-                elif key == ord('m'):
+                elif self.difficulty == 1:
                     frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
                     cv2.putText(frame, 'Select a difficulty:', (140, 220), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
-                    self.difficulty = 1
                     cv2.putText(frame, "-->",(135,350), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.putText(frame, "Easy --- \'e\'", (175, 300), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.putText(frame, "Medium --- Enter", (175, 350), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.putText(frame, "Hard --- \'h\'", (175, 400), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.imshow(WINDOWNAME, frame)
-                elif key == ord('h'):
+                elif self.difficulty == 2:
                     frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
                     cv2.putText(frame, 'Select a difficulty:', (140, 220), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
-                    self.difficulty = 2
                     cv2.putText(frame, "-->",(135,400), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.putText(frame, "Easy --- \'e\'", (175, 300), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.putText(frame, "Medium --- \'m\'", (175, 350), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
@@ -476,11 +498,12 @@ class Game():
             cv2.putText(frame, "Press any key to start.", (140, 300), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             while True:
-                key = cv2.waitKey(0)
+                key = cv2.waitKey(10)
                 if key == ESC_KEY:
                     self.__del__()
                     exit(0)
-                elif key > 0: 
+                elif key > 0 or self.enter_pressed == True:
+                    self.enter_pressed = False
                     break
         elif screen_type == 'level_end':
             words = ['Level End']
@@ -788,7 +811,8 @@ class Game():
                 if key == ESC_KEY:
                     self.__del__()
                     exit(0)
-                if key == ENTER_KEY:
+                if key == ENTER_KEY or self.enter_pressed == True:
+                    self.enter_pressed = False
                     self.show_screen('tutorial2')
         elif screen_type == 'tutorial2':
             phrases = ["Rules:",
@@ -809,7 +833,8 @@ class Game():
                 if key == ESC_KEY:
                     self.__del__()
                     exit(0)
-                if key == ENTER_KEY:
+                if key == ENTER_KEY or self.enter_pressed == True:
+                    self.enter_pressed = False
                     self.show_screen('tutorial3')
         elif screen_type == 'tutorial3':
             phrases = ["Powerups:",
@@ -832,7 +857,8 @@ class Game():
                 if key == ESC_KEY:
                     self.__del__()
                     exit(0)
-                if key == ENTER_KEY:
+                if key == ENTER_KEY or self.enter_pressed == True:
+                    self.enter_pressed = False
                     self.show_screen('tutorial4')
         elif screen_type == 'tutorial4':
             phrases = ["Calibration:",
@@ -854,7 +880,8 @@ class Game():
                 if key == ESC_KEY:
                     self.__del__()
                     exit(0)
-                if key == ENTER_KEY:
+                if key == ENTER_KEY or self.enter_pressed == True:
+                    self.enter_pressed = False
                     #self.show_screen('tutorial4')
                     self.calibrate()
                     self.game() 
