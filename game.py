@@ -18,9 +18,6 @@ from botocore.config import Config
 from botocore.client import ClientError
 import key
 
-
-random.seed(0)
-rand_int = 0
 region='us-east-1'
 ROOM = 'ece180d-team1-room-'
 
@@ -1103,9 +1100,7 @@ class Game():
         self.powerup_used = 0 # set this when powerup is used
         self.move_on = 0
         start_time = time.perf_counter()
-        pose_num = rand_int # random.randint(0,2)
-        rand_int += 1 
-        rand_int %= 3 
+        pose_num = random.randint(0,2)
         gesture_name = self.multi_gesture_names[pose_num]
         self.generated_powerup = self.multi_powerups[pose_num]
         self.current_description = self.multi_description[pose_num]
