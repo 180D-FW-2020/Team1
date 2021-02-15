@@ -236,13 +236,16 @@ class Game():
                     self.reset_timer = -1
         else: 
             if gesture == 'wave':
-                if self.current_powerup == 'lights_out':
+                if self.generated_powerup == 'lights_out':
+                    self.current_powerup = self.generated_powerup
                     self.powerup_used = 1
             elif gesture == 'tap':
-                if self.current_powerup == 'mirror':
+                if self.generated_powerup == 'mirror':
+                    self.current_powerup = self.generated_powerup
                     self.powerup_used = 1
             elif gesture == 'double_tap':
-                if self.current_powerup == 'double_points':
+                if self.generated_powerup == 'double_points':
+                    self.current_powerup = self.generated_powerup
                     self.powerup_used = 1
 
     def on_message(self, client, userdata, message):
@@ -1095,6 +1098,7 @@ class Game():
             if self.TIMER_THRESHOLD > 5:
                 self.TIMER_THRESHOLD -= 2
     def send_pose(self):
+        global rand_int
         ## include screen to say "you're up"
         self.powerup_used = 0 # set this when powerup is used
         self.move_on = 0
