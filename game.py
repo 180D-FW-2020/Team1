@@ -18,6 +18,7 @@ from botocore.config import Config
 from botocore.client import ClientError
 import key
 
+# NOTE move power up/gesture txt down for multiplayer
 region='us-east-1'
 ROOM = 'ece180d-team1-room-'
 
@@ -719,7 +720,7 @@ class Game():
                         if self.current_powerup == 'mirror':
                             contour = cv2.flip(contour,1)
                         if self.current_powerup == 'lights_out':
-                            frame = cv2.addWeighted(frame,.5,contour,contour_weight,0)
+                            frame = cv2.addWeighted(frame, .2, contour,contour_weight,0) # @NOTE make gradient
                         else:
                             frame = cv2.addWeighted(frame,self.uservid_weight,contour,contour_weight,0)
                         cv2.putText(frame, "Time Remaining: {}".format(time_remaining), (10, 50), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
