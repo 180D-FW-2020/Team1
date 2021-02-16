@@ -42,7 +42,7 @@ if __name__ == "__main__":
 
 
     packet = {
-        "username": "lol",
+        "username": 'cancel',
         "disconnect": 'suck my balls'
     }
     client.publish(connection_string, json.dumps(packet), qos=1)
