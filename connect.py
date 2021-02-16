@@ -4,7 +4,11 @@ from paramiko import SSHClient
 class rpi_conn():
  # connect to raspberry pi and run gesture recognition code. 
 
-    def __init__(self): 
+    def __init__(self, ip, port, user, password): 
+        self.ip = ip 
+        self.port = port 
+        self.user = user 
+        self.password = password
         self.connected = False
         self.username = ''
         self.roomcode = ''
@@ -13,13 +17,15 @@ class rpi_conn():
         self.ssh = paramiko.SSHClient()
         self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     
-    def connect(self, ip, port, user, password):
+    def connect(self):
         try:
-            self.ssh.connect(ip, port, user, password)
+            self.ssh.connect(self.ip, self.port, self.user, self.password)
         except:
             self.connected = False
+            print("couldn\'t connect to Raspberry Pi, check connection information")
             return
         self.connected = True
+        print("connected to Raspberry Pi")
 
     def set_conn_info(self, mode='', username='', roomcode=''):       
         if mode == 'm': 
