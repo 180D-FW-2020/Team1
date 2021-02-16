@@ -6,7 +6,6 @@ overall handler for the output to user
 from PoseEstimation import *
 from ContourDetection import *
 from voice import *
-# from mqtt import *
 import cv2
 import time 
 import numpy as np
@@ -18,13 +17,10 @@ import boto3
 from botocore.config import Config
 from botocore.client import ClientError
 import key
-# OUTPUT = '.\output\\'
-# if os.path.isdir(OUTPUT) == False:
-#     os.makedir(OUTPUT)
+
+# NOTE move power up/gesture txt down for multiplayer
 region='us-east-1'
 ROOM = 'ece180d-team1-room-'
-
-test_points = [(304, 88), (304, 136), (272, 160), (272, 216), (504, 152), (328, 152), (328, 232), (336, 264), (480, 192), (280, 368), (288, 416), (496, 192), (320, 368), (320, 416), (420, 420)]
 
 FONTCOLORWHITE = (255,255,255)
 FONTCOLORBLACK = (0,0,0)
@@ -34,10 +30,7 @@ FONTSIZE = 1
 
 ACCESS_KEY = key.ACCESS_KEY
 SECRET_KEY = key.SECRET_KEY
-# mfile.write("Hello World!")
-# mfile.close()
 
-# MQTT connection string
 connection_string = "ece180d/team1"
 
 # 1 to see all the contours, 2 to see the points after contour detection, 3 for testing the pause button
@@ -186,6 +179,21 @@ class Game():
         self.pose_leader = ''
         self.round_scores = {} # creator keeps track of who got what score that specific round -- emptied after each round ends 
         self.total_scores = {} # creator keeps track of who has what score ovreal -- never empties 
+        self.multi_powerups = ['double_points', 'mirror', 'lights_out']
+        """ powerup list for multiplayer:
+        1. double_points: for pose leader -- gets 2*(15-average of other people's scores) for the round
+        2. mirror: mirror's posers' camera and contour 
+        3. lights_out: blacks out posers' camera
+        """
+        self.multi_gesture_names = ['double tap','tap','wave']
+        self.multi_description = ['Hopefully your pose was too hard for em!',
+        'You mirrored your opponents\' screens!',
+        'You turned off their cameras!'
+        ]
+        self.generated_powerup = ''
+        self.current_powerup = ''
+        self.current_description = ''
+        self.powerup_used = 0
         # @NOTE indexing should be same for round_scores and total_scores
     # start mqtt 
     def on_connect(self, client, userdata, flags, rc):
@@ -198,31 +206,45 @@ class Game():
             print('Expected Disconnect')
 
     def on_gesture(self,gesture):
-        if gesture == 'wave':
-            # add 1 to activate powerup count 
-            if self.play == False:
-                return
-            if self.powerup_vals[power_up_file_names[0]] < 3:
-                self.powerup_vals[power_up_file_names[0]] += 1
-            else:
-                pass # try to add more points for the level 
-        elif gesture == 'tap':
-            # add 1 to help powerup count 
-            if self.play == False:
-                return
-            if self.powerup_vals[power_up_file_names[1]] < 3:
-                self.powerup_vals[power_up_file_names[1]] += 1
-            else:
-                pass # try to add more points for the level 
-        elif gesture == 'double_tap':
-            # pause/un-pause
-            if self.play:
-                self.play = False
-                self.reset_timer = time.perf_counter()
-            else:
-                self.play = True
-                self.TIMER_THRESHOLD += int(time.perf_counter() - self.reset_timer)
-                self.reset_timer = -1
+        if self.mode == 0:
+            if gesture == 'wave':
+                # add 1 to activate powerup count 
+                if self.play == False:
+                    return
+                if self.powerup_vals[power_up_file_names[0]] < 3:
+                    self.powerup_vals[power_up_file_names[0]] += 1
+                else:
+                    pass # try to add more points for the level 
+            elif gesture == 'tap':
+                # add 1 to help powerup count 
+                if self.play == False:
+                    return
+                if self.powerup_vals[power_up_file_names[1]] < 3:
+                    self.powerup_vals[power_up_file_names[1]] += 1
+                else:
+                    pass # try to add more points for the level 
+            elif gesture == 'double_tap':
+                # pause/un-pause
+                if self.play:
+                    self.play = False
+                    self.reset_timer = time.perf_counter()
+                else:
+                    self.play = True
+                    self.TIMER_THRESHOLD += int(time.perf_counter() - self.reset_timer)
+                    self.reset_timer = -1
+        else: 
+            if gesture == 'wave':
+                if self.generated_powerup == 'lights_out':
+                    self.current_powerup = self.generated_powerup
+                    self.powerup_used = 1
+            elif gesture == 'tap':
+                if self.generated_powerup == 'mirror':
+                    self.current_powerup = self.generated_powerup
+                    self.powerup_used = 1
+            elif gesture == 'double_tap':
+                if self.generated_powerup == 'double_points':
+                    self.current_powerup = self.generated_powerup
+                    self.powerup_used = 1
 
     def on_message(self, client, userdata, message):
         print('Received message: "' + str(message.payload) + '" on topic "' +
@@ -242,12 +264,16 @@ class Game():
                 self.send_my_pose = 0 
         if "round_over" in packet: # creator sends this across when the round is over --> don't keep waiting for others now
             self.waiting_for_others = 0
+            self.current_powerup = ''
             self.move_on = 1
+            if self.pose_leader == ''.join(self.nickname):
+                self.level_score = packet["round_over"]
         if "gesture" in packet:
             print(packet["gesture"])
             self.on_gesture(packet["gesture"])
         if "send_my_pose" in packet and user != ''.join(self.nickname):
             self.pose_updated = 1
+            self.current_powerup = packet["send_my_pose"] 
             self.pose = packet["pose"]
             print(type(self.pose))
             print(packet["pose"])
@@ -263,12 +289,19 @@ class Game():
             if len(self.round_scores) == self.num_users:
                 ## round is over 
                 self.move_on = 1
+                total = 0 
+                for key, value in self.round_scores.items():
+                    total += value 
+                total = int(15 - (total/self.num_users))
+                if self.current_powerup == 'double_points':
+                    total *= 2
+                self.total_scores[self.pose_leader] += total 
                 """
                 implement csv logic here
                 """
                 packet = {
                     "username": ''.join(self.nickname),
-                    "round_over": 1,
+                    "round_over": total,
                     "scoreboard": self.total_scores
                 }
                 self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
@@ -664,7 +697,7 @@ class Game():
             self.next_leader = 0
             frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
             txt = ''
-            cv2.putText(frame, "Please wait for user {} to create a pose".format(self.pose_leader),(140,220), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Please wait for {} to create a pose!".format(self.pose_leader),(140,220), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             while True: #while in this loop, we're waiting for pose leader 
                 key = cv2.waitKey(10)
@@ -676,18 +709,25 @@ class Game():
                     while True:
                         key = cv2.waitKey(1)
                         _, frame = self.cap.read()
-                        frame = cv2.flip(frame, 1)
+                        if self.current_powerup != 'mirror':
+                            frame = cv2.flip(frame, 1)
                         original = np.copy(frame)
                         time_elapsed = int(time.perf_counter() - start_time)
                         time_remaining = 10 - time_elapsed
                         contour_weight = 1
                         contour, _ = self.PoseEstimator.getContourFromPoints(self.pose)
                         contour = cv2.bitwise_not(contour)
-                        frame = cv2.addWeighted(frame,self.uservid_weight,contour,contour_weight,0)
+                        if self.current_powerup == 'mirror':
+                            contour = cv2.flip(contour,1)
+                        if self.current_powerup == 'lights_out':
+                            frame = cv2.addWeighted(frame, .2, contour,contour_weight,0) # @NOTE make gradient
+                        else:
+                            frame = cv2.addWeighted(frame,self.uservid_weight,contour,contour_weight,0)
                         cv2.putText(frame, "Time Remaining: {}".format(time_remaining), (10, 50), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                         # cv2.putText(frame, "Score: {}".format(self.user_score), (500, 50), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                         cv2.imshow(WINDOWNAME, frame)
                         if time_remaining <= -1: 
+                            time_remaining = 0
                             original, points = self.PoseEstimator.getSkeleton(original)
                             self.level_score = self.PoseDetector.isWithinContour(points, contour)
                             for pair in self.PoseEstimator.POSE_PAIRS:
@@ -750,6 +790,9 @@ class Game():
         elif screen_type == 'waiting_for_others_pose':
             self.next_leader = 0
             cv2.putText(frame, "Waiting for other users to match your pose",(140,220), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+            if self.powerup_used == 1:
+                cv2.putText(frame, "{} powerup used!".format(self.current_powerup),(140,240), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                cv2.putText(frame, "{}".format(self.current_description),(140,260), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             start_time = time.perf_counter()
             while True: #while in this loop, we're waiting for pose leader 
@@ -1043,6 +1086,7 @@ class Game():
     def singleplayer(self):
         while self.difficulty == -1:
             self.show_screen('difficulty')
+        self.client_mqtt.subscribe(ROOM, qos=1)
         while True:
             self.level_number += 1
             self.slow_down_used = False
@@ -1052,9 +1096,15 @@ class Game():
             if self.TIMER_THRESHOLD > 5:
                 self.TIMER_THRESHOLD -= 2
     def send_pose(self):
+        global rand_int
         ## include screen to say "you're up"
+        self.powerup_used = 0 # set this when powerup is used
         self.move_on = 0
         start_time = time.perf_counter()
+        pose_num = random.randint(0,2)
+        gesture_name = self.multi_gesture_names[pose_num]
+        self.generated_powerup = self.multi_powerups[pose_num]
+        self.current_description = self.multi_description[pose_num]
         while self.send_my_pose == 1: 
             key = cv2.waitKey(1)
             _, frame = self.cap.read()
@@ -1065,9 +1115,10 @@ class Game():
             time_remaining = 10 - time_elapsed
             cv2.putText(frame, "Time Remaining: {}".format(time_remaining), (10, 50), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.putText(frame, "Strike a pose!".format(time_remaining), (375, 50), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
-
+            cv2.putText(frame, "Do the {} gesture to get the {} powerup!".format(gesture_name,self.generated_powerup), (10, 350), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             if time_remaining <= -1: 
+                time_remaining = 0
                 frame, points = self.PoseEstimator.getSkeleton(frame)
                 for pair in self.PoseEstimator.POSE_PAIRS:
                     point1 = points[pair[0]]
@@ -1080,7 +1131,7 @@ class Game():
                 self.send_my_pose = 0
                 packet = {
                     "username": ''.join(self.nickname),
-                    "send_my_pose": 1,
+                    "send_my_pose": self.current_powerup,
                     "pose": points
                 }
                 self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
