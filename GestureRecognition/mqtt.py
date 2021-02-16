@@ -7,6 +7,7 @@ from gesture_detector import gestureRecognizer
 
 connection_string = "ece180d-team1-room-"
 accel_thres = 200
+keep_running = True
 
 usage_msg = '''%prog [mode] [username] [roomcode - multiplayer only]
 connect using username and roomcode from main game.'''
@@ -60,8 +61,13 @@ def on_disconnect(client, userdata, rc):
 # The default message callback.
 # (you can create separate callbacks per subscribed topic)
 def on_message(client, userdata, message):
+    global keep_running
     print('Received message: "' + str(message.payload) + '" on topic "' +
     message.topic + '" with QoS ' + str(message.qos))
+    packet = json.loads(message.payload)
+    if "disconnect" in packet:
+        keep_running = False
+        
 
 if __name__ == "__main__": 
     # 1. create a client instance.
@@ -102,10 +108,10 @@ if __name__ == "__main__":
 
     accel_base = accel_base/count 
 
-    print("Base acceleration: " + str(accel_base))
+    print("Base acceleration: " + str(accel_base)) 
 
-    while True:
-        #Example method for sending a gesture
+    while keep_running:
+        # method for sending a gesture
         check = [] + n.collect() 
         accel_sum = (abs(check[0]) + abs(check[1]) + abs(check[2])) / 3
         if(accel_sum - accel_base > accel_thres): 
@@ -114,8 +120,8 @@ if __name__ == "__main__":
             # print(prediction)
             if(prediction != "negative_trim" and last_classification != prediction): 
                 packet = {
-                "username": username,
-                "gesture": prediction
+                    "username": username,
+                    "gesture": prediction
                 }
                 client.publish(connection_string, json.dumps(packet), qos=1)
             last_classification = prediction
