@@ -27,14 +27,15 @@ See requirements.txt
 # Installation for Users 
 ```
 cd GestureRecognition 
+chmod +x setup.sh
 ./setup.sh
 ```
 
 # Running the Game
 '
 ```
-conda activate hitw
+source activate hitw
 python mqtt.py #single player 
-python mqtt.py -r *insert 6 character room code* -u *insert nickname* #multiplayer
+python mqtt.py -m 'm' -r 'insert 6 character room code' -u 'insert nickname' #multiplayer
 ```
 
