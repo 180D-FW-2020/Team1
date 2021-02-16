@@ -9,6 +9,7 @@ See requirements.txt
 # Installation for Users
 Clone our [repo](https://github.com/180D-FW-2020/Team1). 
 Download our trained dnn model [pose_iter_160000.caffemodel](https://drive.google.com/file/d/1opfbTlgxeEw4yokoNndD36NVYGc8c0Xe/view?usp=sharing). 
+Change key.py to your passwords. 
  
 ```
 ./setup.sh
