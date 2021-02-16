@@ -2,23 +2,26 @@ import paramiko
 from paramiko import SSHClient
 
 class rpi_conn():
- # Find all the directories you want to upload already in files.
+ # connect to raspberry pi and run gesture recognition code. 
 
-    def connect(self, ip, port, user, password):
+    def __init__(self): 
         self.connected = False
+        self.username = ''
+        self.roomcode = ''
+        self.mode = ''
+        self.parameters = ''
+        self.ssh = paramiko.SSHClient()
+        self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    
+    def connect(self, ip, port, user, password):
         try:
-            self.ssh = paramiko.SSHClient()
-            self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             self.ssh.connect(ip, port, user, password)
         except:
             self.connected = False
             return
         self.connected = True
 
-    def run(self, mode='', username='', roomcode=''):
-        self.username = ''
-        self.roomcode = ''
-        self.mode = ''
+    def set_conn_info(self, mode='', username='', roomcode=''):       
         if mode == 'm': 
             self.mode = ' -m \'m\''
         if username != '': 
@@ -27,6 +30,8 @@ class rpi_conn():
             self.roomcode = ' -r \'' + roomcode + '\''
 
         self.parameters = self.mode + self.roomcode + self.username  
+
+    def run(self):
         
         command = 'source berryconda3/bin/activate hitw; echo activated hitw conda env; cd Team1/GestureRecognition; python mqtt.py' + self.parameters 
 
