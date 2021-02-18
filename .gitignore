@@ -9,7 +9,7 @@
 *.caffemodel
 main.py
 testVision.py
-key.py
+# key.py
 room_info.csv
 !/graphics/**
 

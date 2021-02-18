@@ -8,8 +8,14 @@ See requirements.txt
 
 # Installation for Users
 Clone our [repo](https://github.com/180D-FW-2020/Team1). 
-Download our trained dnn model [pose_iter_160000.caffemodel](https://drive.google.com/file/d/1opfbTlgxeEw4yokoNndD36NVYGc8c0Xe/view?usp=sharing). 
-Change key.py to your passwords. 
+If you're having issues downloading our trained dnn model download here: [pose_iter_160000.caffemodel](https://drive.google.com/file/d/1opfbTlgxeEw4yokoNndD36NVYGc8c0Xe/view?usp=sharing). 
+Change key.py to your passwords + Raspberry Pi login information. 
+
+If you're on a MAC, first run the command: 
+```
+chmod +x setup.sh 
+```
+Enter the following commands to install the game on your laptop: 
  
 ```
 ./setup.sh
@@ -17,21 +23,18 @@ conda activate hitw
 pip install pipwin 
 pipwin install pyaudio
 ```
+On the Raspberry Pi:
+```
+cd GestureRecognition 
+chmod +x setup.sh
+./setup.sh
+```
 
 # Running the Game
 On your laptop:
 ```
 conda activate hitw
 python game.py
-```
-On the Raspberry Pi:
-```
-cd GestureRecognition 
-chmod +x setup.sh
-./setup.sh
-source activate hitw
-python mqtt.py #single player 
-python mqtt.py -m 'm' -r 'insert 6 character room code' -u 'insert nickname' #multiplayer
 ```
 
 # User Manual 
