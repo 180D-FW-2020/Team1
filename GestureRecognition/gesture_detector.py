@@ -1,17 +1,11 @@
 import sys
-import time
-import math
 import IMU
 import datetime
-import os
-import pandas as pd 
+from pandas import DataFrame 
 import utils
-import collections
-import joblib
-import subprocess
-import shlex
+from joblib import load
 
-model = joblib.load('./models/267pt_model.joblib') 
+model = load('./models/267pt_model.joblib') 
 
 CHECK_TIME_INCREMENT_MS = 200
 SAMPLE_SIZE_MS = 1500
@@ -190,7 +184,7 @@ class gestureRecognizer:
             self.previous_elapsed_ms = self.elapsed_ms
 
             if self.elapsed_ms - self.last_classified >= CHECK_TIME_INCREMENT_MS and len(self.data) == self.maxlen:
-                df = pd.DataFrame(list(self.data), columns=self.header)
+                df = DataFrame(list(self.data), columns=self.header)
                 features = utils.get_model_features(df) + [0]
                 # for i in features: 
                 #     print(i)

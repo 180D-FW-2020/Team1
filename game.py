@@ -6,6 +6,8 @@ overall handler for the output to user
 from PoseEstimation import *
 from ContourDetection import *
 from voice import *
+from connect import *
+# from mqtt import *
 import cv2
 import time 
 import numpy as np
@@ -16,6 +18,7 @@ import json
 import boto3
 from botocore.config import Config
 from botocore.client import ClientError
+import threading
 import key
 
 # NOTE move power up/gesture txt down for multiplayer
@@ -30,6 +33,23 @@ FONTSIZE = 1
 
 ACCESS_KEY = key.ACCESS_KEY
 SECRET_KEY = key.SECRET_KEY
+
+try:
+    ip = key.ip 
+    port = key.port
+    user = key.user 
+    password = key.password
+    raspi = True 
+except AttributeError:
+    ip = ''
+    port = ''
+    user = ''
+    password = ''
+    raspi = False 
+    print('No Raspberry Pi detected, check key.py to verify connection information.')
+
+# mfile.write("Hello World!")
+# mfile.close()
 
 connection_string = "ece180d/team1"
 
@@ -101,6 +121,7 @@ if DEBUG == 1:
 
 class Game():
     def __init__(self):
+
         # Capturing Video
         self.cap = cv2.VideoCapture(0)
         self.width  = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -134,6 +155,12 @@ class Game():
         self.client_mqtt.loop_start() # 3. call one of the loop*() functions to maintain network traffic flow with the broker.
         self.users = {}
         self.num_users = 0
+
+        # Raspberry Pi 
+        if raspi: 
+            self.remote_connection = rpi_conn(ip, port, user, password)
+            x = threading.Thread(target = self.remote_connection.connect, daemon=True)
+            x.start()
 
         # powerups
         self.powerup_vals = {} 
@@ -1114,6 +1141,9 @@ class Game():
         while self.difficulty == -1:
             self.show_screen('difficulty')
         self.client_mqtt.subscribe(ROOM, qos=1)
+        if raspi: 
+            x = threading.Thread(target = self.remote_connection.run, daemon=True)
+            x.start()
         while True:
             self.level_number += 1
             self.slow_down_used = False
@@ -1221,6 +1251,10 @@ class Game():
         self.room_name = ROOM + ''.join(self.room)
         print(self.room_name)
         self.createaws()
+        if raspi: 
+            self.remote_connection.set_conn_info('m', ''.join(self.nickname), ''.join(self.room))
+            x = threading.Thread(target = self.remote_connection.run, daemon=True)
+            x.start()
         if self.creator == 1:
             self.creator_code()
         else: # regular user 
