@@ -80,33 +80,30 @@ cv2.namedWindow(WINDOWNAME, cv2.WND_PROP_FULLSCREEN)
 cv2.setWindowProperty(WINDOWNAME,cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
 
 # FILESYSTEM Definitions 
-GRAPHICS = '.\graphics\\'
-POSES = 'poses\\'
-POWERUPS = 'powerups\\'
-PATH = GRAPHICS + POSES
-DIFFICULTIES = ['easy\\', 'medium\\', 'hard\\']
+GRAPHICS = os.path.join(os.path.curdir, 'graphics')
+POSES = os.path.join(GRAPHICS, 'poses')
+POWERUPS = os.path.join(GRAPHICS, 'powerups')
+DIFFICULTIES = [os.path.join(POSES, 'easy'), os.path.join(POSES, 'medium'), os.path.join(POSES, 'hard')]
 
 # FILESYSTEM Work 
 powerup_pictures = {}
-powerup_dir = GRAPHICS + POWERUPS
-power_up_file_names = os.listdir(powerup_dir)
+power_up_file_names = os.listdir(POWERUPS)
 for powerup_file_name in power_up_file_names:
-    powerup = cv2.imread(powerup_dir + powerup_file_name)
+    powerup = cv2.imread(os.path.join(POWERUPS, powerup_file_name))
     powerup_pictures[powerup_file_name] = powerup
     
 easy_contours = []
 medium_contours = []
 hard_contours = []
 for difficulty in DIFFICULTIES:
-    cur_dir = PATH + difficulty
-    for contour_file in os.listdir(cur_dir):
-        img = cv2.imread(cur_dir + contour_file)
+    for contour_file in os.listdir(difficulty):
+        img = cv2.imread(os.path.join(difficulty, contour_file))
         img = cv2.bitwise_not(img)
-        if difficulty == 'easy\\':
+        if difficulty == os.path.join(POSES, 'easy'):
             easy_contours.append(img)
-        if difficulty == 'medium\\':
+        if difficulty == os.path.join(POSES, 'medium'):
             medium_contours.append(img)
-        if difficulty == 'hard\\':
+        if difficulty == os.path.join(POSES, 'hard'):
             hard_contours.append(img)
 contour_pictures = []
 contour_pictures.extend(easy_contours)
@@ -597,7 +594,7 @@ class Game():
         elif screen_type == 'room':
             cv2.putText(frame, "Enter a 6-character room code:",(115,220), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             for i in range(len(self.room)):
-                cv2.putText(frame, self.room[i], (115+ 20*i,300), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                cv2.putText(frame, self.room[i], (115 + 20*i,300), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             num = 0
 
@@ -621,7 +618,7 @@ class Game():
                     frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
                     cv2.putText(frame, "Enter a 6-character room code:",(115,220), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     for i in range(len(self.room)):
-                        cv2.putText(frame, self.room[i], (115+ 20*i,300), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                        cv2.putText(frame, self.room[i], (115 + 20*i,300), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.imshow(WINDOWNAME, frame)
         elif screen_type == 'nickname':
             cv2.putText(frame, "Nickname:",(115,220), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
@@ -643,7 +640,7 @@ class Game():
                     frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
                     cv2.putText(frame, "Nickname:",(115,220), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     for i in range(len(self.nickname)):
-                        cv2.putText(frame, self.nickname[i], (115+ 20*i,300), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                        cv2.putText(frame, self.nickname[i], (115 + 20*i,300), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.imshow(WINDOWNAME, frame)
             return
         elif screen_type == 'no_room':
@@ -670,7 +667,7 @@ class Game():
         elif screen_type == 'password':
             cv2.putText(frame, "Enter the room password:",(140,220), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             for i in range(len(self.room)):
-                cv2.putText(frame, self.room[i], (130+ 20*i,300), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                cv2.putText(frame, self.room[i], (130 + 20*i,300), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             num = 0
             while True:
@@ -690,7 +687,7 @@ class Game():
                     frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
                     cv2.putText(frame, "Enter the room password:",(140,220), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     for i in range(len(self.password)):
-                        cv2.putText(frame, '*', (115+ 20*i,300), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                        cv2.putText(frame, '*', (115 + 20*i,300), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.imshow(WINDOWNAME, frame)
             return
         elif screen_type == 'start_game_multi':
@@ -700,7 +697,7 @@ class Game():
                 frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
                 i = 0
                 for key, value in self.users.items():
-                    cv2.putText(frame, "{} is in the lobby.".format(value),(200,240+i*25), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "{} is in the lobby.".format(value),(200,240 + i*25), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     i += 1
                 cv2.putText(frame, "Press Enter to Start the Game".format(ROOM+''.join(self.room)),(140,220), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                 cv2.imshow(WINDOWNAME, frame)
@@ -970,7 +967,7 @@ class Game():
                     return
                 pass    
     def calibrate(self):
-        contour = cv2.imread(PATH + 'test.jpg')
+        contour = cv2.imread(os.path.join(POSES, 'test.jpg'))
         contour = cv2.bitwise_not(contour)
         valid_config = 0
         while valid_config == 0:
