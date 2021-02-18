@@ -1,11 +1,13 @@
+from os.path import curdir
 import sys
+import os
 import IMU
 import datetime
 from pandas import DataFrame 
 import utils
 from joblib import load
 
-model = load('./models/267pt_model.joblib') 
+model = load(os.path.join(curdir, 'models', '267pt_model.joblib')) 
 
 CHECK_TIME_INCREMENT_MS = 200
 SAMPLE_SIZE_MS = 1500
