@@ -8,7 +8,6 @@ See requirements.txt
 
 # Installation for Users
 Clone our [repo](https://github.com/180D-FW-2020/Team1). 
-If you're having issues downloading our trained dnn model download here: [pose_iter_160000.caffemodel](https://drive.google.com/file/d/1opfbTlgxeEw4yokoNndD36NVYGc8c0Xe/view?usp=sharing). 
 Change key.py to your passwords + Raspberry Pi login information. 
 
 If you're on a MAC: 
@@ -41,7 +40,7 @@ python game.py
 ```
 
 # User Manual 
-Read our [User Manual](https://docs.google.com/document/d/1mSSGqndTtNvM9dn26AQYYy9mmHIH6x1cDG8x9IvnCus/edit?usp=sharing) for more details on how to play the game! 
+Read our [User Manual](https://docs.google.com/document/d/1mSSGqndTtNvM9dn26AQYYy9mmHIH6x1cDG8x9IvnCus/edit?usp=sharing) for more details on how to play the game and some tips for troubleshooting! 
 
 # Source Code Descriptions:
 | File | Description |
