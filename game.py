@@ -717,7 +717,8 @@ class Game():
             while True:
                 frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
                 i = 0
-                for key, value in self.users.items():
+                user_info = self.users.copy()
+                for key, value in user_info.items():
                     cv2.putText(frame, "{} is in the lobby.".format(value),(200,240 + i*25), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     i += 1
                 cv2.putText(frame, "Press Enter to Start the Game".format(ROOM+''.join(self.room)),(140,220), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
@@ -796,6 +797,9 @@ class Game():
                         else:
                             frame = cv2.addWeighted(frame,self.uservid_weight,contour,contour_weight,0)
                         cv2.putText(frame, "Time Remaining: {}".format(time_remaining), (10, 50), FONT, FONTSCALE, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                        if self.current_powerup != '':
+                            cv2.putText(frame, "{} used the {} powerup on you!".format(self.pose_leader,self.current_powerup), (10, 450), FONT, FONTSCALE - 0.25, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+
                         # cv2.putText(frame, "Score: {}".format(self.user_score), (500, 50), FONT, FONTSCALE, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                         cv2.imshow(WINDOWNAME, frame)
                         if time_remaining <= -1: 
@@ -1235,7 +1239,8 @@ class Game():
         self.powerup_used = 0 # set this when powerup is used
         self.move_on = 0
         start_time = time.perf_counter()
-        pose_num = random.randint(0,2)
+        # pose_num = random.randint(0,2)
+        pose_num = 2
         gesture_name = self.multi_gesture_names[pose_num]
         self.generated_powerup = self.multi_powerups[pose_num]
         self.current_description = self.multi_description[pose_num]
@@ -1249,7 +1254,10 @@ class Game():
             time_remaining = 10 - time_elapsed
             cv2.putText(frame, "Time Remaining: {}".format(time_remaining), (10, 50), FONT, FONTSCALE, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.putText(frame, "Strike a pose!".format(time_remaining), (375, 50), FONT, FONTSCALE, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
-            cv2.putText(frame, "Do the {} gesture to get the {} powerup!".format(gesture_name,self.generated_powerup), (10, 450), FONT, FONTSCALE - 0.25, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+            if self.current_powerup != self.generated_powerup:
+                cv2.putText(frame, "Do the {} gesture to get the {} powerup!".format(gesture_name,self.generated_powerup), (10, 450), FONT, FONTSCALE - 0.25, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+            else: 
+                cv2.putText(frame, "You gained the {} powerup!".format(self.generated_powerup), (10, 450), FONT, FONTSCALE - 0.25, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             if time_remaining <= -1: 
                 time_remaining = 0
