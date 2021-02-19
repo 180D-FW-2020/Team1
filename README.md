@@ -8,7 +8,7 @@ See requirements.txt
 
 # Installation for Users
 Clone our [repo](https://github.com/180D-FW-2020/Team1). 
-Change key.py to your passwords + Raspberry Pi login information. 
+Download and change [key.py](https://drive.google.com/file/d/1E3bpf4huUrUgIFHYl_1z13nRmQvIFrkn/view?usp=sharing) to your passwords + Raspberry Pi login information. Put in the main directory. 
 
 If you're on a MAC: 
 ```
