@@ -240,7 +240,7 @@ class Game():
         else:
             print('Expected Disconnect')
 
-    def on_gesture(self,gesture):
+    def on_gesture(self, gesture):
         if self.mode == 0:
             if gesture == 'wave':
                 # add 1 to activate powerup count 
@@ -268,6 +268,8 @@ class Game():
                     self.TIMER_THRESHOLD += int(time.perf_counter() - self.reset_timer)
                     self.reset_timer = -1
         else: 
+            if self.pose_leader != ''.join(self.nickname):
+                return
             if gesture == 'wave':
                 if self.generated_powerup == 'lights_out':
                     self.current_powerup = self.generated_powerup
@@ -1247,7 +1249,7 @@ class Game():
             time_remaining = 10 - time_elapsed
             cv2.putText(frame, "Time Remaining: {}".format(time_remaining), (10, 50), FONT, FONTSCALE, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.putText(frame, "Strike a pose!".format(time_remaining), (375, 50), FONT, FONTSCALE, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
-            cv2.putText(frame, "Do the {} gesture to get the {} powerup!".format(gesture_name,self.generated_powerup), (10, 400), FONT, FONTSCALE - 0.25, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Do the {} gesture to get the {} powerup!".format(gesture_name,self.generated_powerup), (10, 450), FONT, FONTSCALE - 0.25, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             if time_remaining <= -1: 
                 time_remaining = 0
