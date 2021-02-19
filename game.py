@@ -771,6 +771,7 @@ class Game():
                     exit(0)
                 if self.pose_updated == 1: #local user tries to fit in the hole now
                     start_time = time.perf_counter()
+                    user_vid_weight = 1
                     while True:
                         key = cv2.waitKey(1)
                         _, frame = self.cap.read()
@@ -785,7 +786,10 @@ class Game():
                         if self.current_powerup == 'mirror':
                             contour = cv2.flip(contour,1)
                         if self.current_powerup == 'lights_out':
-                            frame = cv2.addWeighted(frame, .2, contour,contour_weight,0) # @NOTE make gradient
+                            user_vid_weight = (10 - time_elapsed)/10
+                            if user_vid_weight <= 0:
+                                user_vid_weight = 0
+                            frame = cv2.addWeighted(frame, user_vid_weight, contour,contour_weight,0) # @NOTE make gradient
                         else:
                             frame = cv2.addWeighted(frame,self.uservid_weight,contour,contour_weight,0)
                         cv2.putText(frame, "Time Remaining: {}".format(time_remaining), (10, 50), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
@@ -1242,7 +1246,7 @@ class Game():
             time_remaining = 10 - time_elapsed
             cv2.putText(frame, "Time Remaining: {}".format(time_remaining), (10, 50), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.putText(frame, "Strike a pose!".format(time_remaining), (375, 50), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
-            cv2.putText(frame, "Do the {} gesture to get the {} powerup!".format(gesture_name,self.generated_powerup), (10, 350), FONT, .8, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Do the {} gesture to get the {} powerup!".format(gesture_name,self.generated_powerup), (10, 400), FONT, .8, FONTCOLORDEFAULT, FONTSIZE - 0.25, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             if time_remaining <= -1: 
                 time_remaining = 0
