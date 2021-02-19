@@ -796,7 +796,10 @@ class Game():
                             frame = cv2.addWeighted(frame, user_vid_weight, contour,contour_weight,0) # @NOTE make gradient
                         else:
                             frame = cv2.addWeighted(frame,self.uservid_weight,contour,contour_weight,0)
-                        cv2.putText(frame, "Time Remaining: {}".format(time_remaining), (10, 50), FONT, FONTSCALE, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                        if time_remaining <= -1:
+                            cv2.putText(frame, "Time Remaining: {}".format(0), (10, 50), FONT, FONTSCALE, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                        else:
+                            cv2.putText(frame, "Time Remaining: {}".format(time_remaining), (10, 50), FONT, FONTSCALE, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                         if self.current_powerup != '':
                             cv2.putText(frame, "{} used the {} powerup on you!".format(self.pose_leader,self.current_powerup), (10, 450), FONT, FONTSCALE - 0.25, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
 
@@ -1065,7 +1068,10 @@ class Game():
                 frame = cv2.flip(frame, 1)
                 original = np.copy(frame)
                 frame = cv2.addWeighted(frame,self.uservid_weight,contour,1,0)
-                cv2.putText(frame, "Time Remaining: {}".format(time_remaining), (10, 50), FONT, FONTSCALE, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                if time_remaining <= -1:
+                    cv2.putText(frame, "Time Remaining: {}".format(0), (10, 50), FONT, FONTSCALE, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                else:
+                    cv2.putText(frame, "Time Remaining: {}".format(time_remaining), (10, 50), FONT, FONTSCALE, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                 cv2.putText(frame, "Step in the Contour.", (375, 50), FONT, FONTSCALE, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                 cv2.imshow(WINDOWNAME, frame)
                 if time_remaining <= -1:
@@ -1239,8 +1245,7 @@ class Game():
         self.powerup_used = 0 # set this when powerup is used
         self.move_on = 0
         start_time = time.perf_counter()
-        # pose_num = random.randint(0,2)
-        pose_num = 2
+        pose_num = random.randint(0,2)
         gesture_name = self.multi_gesture_names[pose_num]
         self.generated_powerup = self.multi_powerups[pose_num]
         self.current_description = self.multi_description[pose_num]
@@ -1252,7 +1257,10 @@ class Game():
             
             time_elapsed = int(time.perf_counter() - start_time)
             time_remaining = 10 - time_elapsed
-            cv2.putText(frame, "Time Remaining: {}".format(time_remaining), (10, 50), FONT, FONTSCALE, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+            if time_remaining <= -1:
+                cv2.putText(frame, "Time Remaining: {}".format(0), (10, 50), FONT, FONTSCALE, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+            else:
+                cv2.putText(frame, "Time Remaining: {}".format(time_remaining), (10, 50), FONT, FONTSCALE, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.putText(frame, "Strike a pose!".format(time_remaining), (375, 50), FONT, FONTSCALE, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             if self.current_powerup != self.generated_powerup:
                 cv2.putText(frame, "Do the {} gesture to get the {} powerup!".format(gesture_name,self.generated_powerup), (10, 450), FONT, FONTSCALE - 0.25, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
