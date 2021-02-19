@@ -240,7 +240,7 @@ class Game():
         else:
             print('Expected Disconnect')
 
-    def on_gesture(self, gesture):
+    def on_gesture(self, gesture, user = ''):
         if self.mode == 0:
             if gesture == 'wave':
                 # add 1 to activate powerup count 
@@ -268,7 +268,7 @@ class Game():
                     self.TIMER_THRESHOLD += int(time.perf_counter() - self.reset_timer)
                     self.reset_timer = -1
         else: 
-            if self.pose_leader != ''.join(self.nickname):
+            if user != ''.join(self.nickname):
                 return
             if gesture == 'wave':
                 if self.generated_powerup == 'lights_out':
@@ -307,7 +307,7 @@ class Game():
                 self.level_score = packet["round_over"]
         if "gesture" in packet:
             print(packet["gesture"])
-            self.on_gesture(packet["gesture"])
+            self.on_gesture(packet["gesture"],user=user)
         if "send_my_pose" in packet and user != ''.join(self.nickname):
             self.pose_updated = 1
             self.current_powerup = packet["send_my_pose"] 
