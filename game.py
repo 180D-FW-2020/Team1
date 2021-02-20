@@ -863,7 +863,7 @@ class Game():
                     frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
                     cv2.putText(frame,'Scoreboard:'.format(self.level_score), (120, 120), FONT, FONTSCALE, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     i = 0 
-                    for key, value in self.total_scores.items():
+                    for key, value in self.total_scores.items().reverse():
                         cv2.putText(frame,'{}: {}'.format(key, value), (120, 140 + 20*i), FONT, FONTSCALE, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                         i += 1 
                     cv2.imshow(WINDOWNAME, frame)
