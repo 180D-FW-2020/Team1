@@ -334,7 +334,7 @@ class Game():
                     total *= 2
                 self.total_scores[self.pose_leader] += total 
                 sorted_totals = {}
-                sorted_keys = sorted(self.total_scores, key=self.total_scores.get)  # [1, 3, 2]
+                sorted_keys = sorted(self.total_scores, key=self.total_scores.get, reverse=True)  # [1, 3, 2]
 
                 for w in sorted_keys:
                     sorted_totals[w] = self.total_scores[w]
@@ -863,7 +863,7 @@ class Game():
                     frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
                     cv2.putText(frame,'Scoreboard:'.format(self.level_score), (120, 120), FONT, FONTSCALE, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     i = 0 
-                    for key, value in self.total_scores.items().reverse():
+                    for key, value in self.total_scores.items():
                         cv2.putText(frame,'{}: {}'.format(key, value), (120, 140 + 20*i), FONT, FONTSCALE, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                         i += 1 
                     cv2.imshow(WINDOWNAME, frame)
