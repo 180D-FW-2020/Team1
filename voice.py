@@ -18,7 +18,10 @@ class commandRecognizer:
         self.stop_listening = self.r.listen_in_background(self.m, self.rec)
     
     def stop(self):
-        self.stop_listening()
+        try: #Older versions of pyaudio do not have this option
+            self.stop_listening(wait_for_stop=True)
+        except:
+            self.stop_listening()
 
     def rec(self, recognizer, audio):
         # received audio data, now we'll recognize it using Google Speech Recognition

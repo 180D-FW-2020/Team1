@@ -1422,10 +1422,10 @@ class Game():
         #     cv2.imshow(WINDOWNAME, frame)
         pass 
     def __del__(self):
+        self.voice.stop()
         cv2.destroyAllWindows()
         self.client_mqtt.loop_stop()
         self.client_mqtt.disconnect()
-        self.voice.stop()
     
 
 def main():
