@@ -345,7 +345,7 @@ class Game():
                 packet = {
                     "username": ''.join(self.nickname),
                     "round_over": total,
-                    "scoreboard": self.total_scores
+                    "scoreboard": sorted_totals
                 }
                 self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
                 self.round_scores = {}
