@@ -1423,8 +1423,6 @@ class Game():
         pass 
     def __del__(self):
         self.voice.stop()
-        self.cap.release() 
-        cv2.destroyAllWindows() 
         packet = {
             "username": 'cancel',
             "disconnect": 'please'
@@ -1433,6 +1431,8 @@ class Game():
             self.client_mqtt.publish(ROOM, json.dumps(packet), qos=1)
         else: 
             self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
+        self.cap.release() 
+        cv2.destroyAllWindows() 
         self.client_mqtt.loop_stop()
         self.client_mqtt.disconnect() 
           
