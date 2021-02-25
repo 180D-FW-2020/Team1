@@ -229,6 +229,10 @@ class Game():
         self.current_powerup = ''
         self.current_description = ''
         self.powerup_used = 0
+        self.round_num = 0
+        self.max_multi_score_round = -1
+        self.round_score_leader = ''
+
         # @NOTE indexing should be same for round_scores and total_scores
     # start mqtt 
     def on_connect(self, client, userdata, flags, rc):
@@ -321,10 +325,16 @@ class Game():
         if "score" in packet and self.creator == 1:
             # print(packet["score"])
             # indicate next round
-            self.round_scores[user] = packet["score"]
-            self.total_scores[user] += packet["score"]
+            score = packet["score"]
+            self.round_scores[user] = score
+            self.total_scores[user] += score
+            if score > self.max_multi_score_round:
+                self.max_multi_score_round = score 
+                self.round_score_leader = user
+
             if len(self.round_scores) == self.num_users:
                 ## round is over 
+                self.round_num += 1
                 self.move_on = 1
                 total = 0 
                 for key, value in self.round_scores.items():
@@ -345,10 +355,16 @@ class Game():
                 packet = {
                     "username": ''.join(self.nickname),
                     "round_over": total,
-                    "scoreboard": sorted_totals
+                    "scoreboard": sorted_totals,
+                    "winner": self.round_score_leader,
+                    "round_num": self.round_num
                 }
                 self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
                 self.round_scores = {}
+                self.max_multi_score_round = -1 
+                self.round_score_leader = ''
+                
+
         if "player_left" in packet:
             self.show_screen('', generic_txt='Someone left the game. Ending game now.')
             self.game()
@@ -369,7 +385,14 @@ class Game():
             pass 
         if "start_mult" in packet and self.creator == 0:
             self.multi_start = 1
-        
+        if "winner" in packet:
+            ### implement picture upload logic 
+            self.round_num = packet["round_num"]
+            if packet["winner"] == ''.join(self.nickname):
+                pose = 'pose' + self.round_num + '.jpg'
+                self.client_aws.upload_file('pose.jpg', self.room_name, pose)
+           
+
     # end mqtt
     def createaws(self):
         valid = 0
@@ -823,6 +846,7 @@ class Game():
                                     cv2.line(frame, tuple(point1), tuple(point2), (0, 255, 255), 2)
                                     cv2.circle(frame, tuple(point1), 8, (0, 0, 255), thickness=-1, lineType=cv2.FILLED)
                             cv2.imshow(WINDOWNAME, frame)
+                            cv2.imwrite('pose.jpg',frame)
                             key = cv2.waitKey(2000)
                             packet = {
                                 "username": ''.join(self.nickname),
