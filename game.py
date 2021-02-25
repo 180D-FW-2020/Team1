@@ -389,7 +389,7 @@ class Game():
             ### implement picture upload logic 
             self.round_num = packet["round_num"]
             if packet["winner"] == ''.join(self.nickname):
-                pose = 'pose' + self.round_num + '.jpg'
+                pose = 'pose' + str(self.round_num) + '.jpg'
                 self.client_aws.upload_file('pose.jpg', self.room_name, pose)
            
 
