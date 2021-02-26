@@ -2,7 +2,7 @@
 
 #list name of packages
 echo "installing base packages"
-conda create -y -n hitw python=3.6 numpy pandas joblib smbus2 paho-mqtt scikit-learn opencv=3.3.1 speechrecognition boto3 paramiko -c conda-forge
+conda create -y -n hitw python=3.8 numpy pandas joblib smbus2 paho-mqtt scikit-learn opencv=4.0.1 speechrecognition boto3 paramiko -c conda-forge
 conda activate hitw 
 echo "finished" 
 
