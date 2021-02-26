@@ -1167,19 +1167,25 @@ class Game():
         # print('time remaining', time_remaining)
         return frame, time_remaining, original
     
+    old_contour_num = 0
     def level(self):
         self.play = True
         timer_old = self.TIMER_THRESHOLD
         
-        if self.difficulty == 0:
-            contour_num = random.randint(0,len(easy_contours)-1)
-            contour = easy_contours[contour_num]
-        elif self.difficulty == 1:
-            contour_num = random.randint(0,len(medium_contours)-1)
-            contour = medium_contours[contour_num]
-        if self.difficulty == 2:
-            contour_num = random.randint(0,len(hard_contours)-1)
-            contour = hard_contours[contour_num]
+        while True:
+            if self.difficulty == 0:
+                contour_num = random.randint(0,len(easy_contours)-1)
+                contour = easy_contours[contour_num]
+            elif self.difficulty == 1:
+                contour_num = random.randint(0,len(medium_contours)-1)
+                contour = medium_contours[contour_num]
+            elif self.difficulty == 2:
+                contour_num = random.randint(0,len(hard_contours)-1)
+                contour = hard_contours[contour_num]
+            if contour_num != self.old_contour_num:
+                self.old_contour_num = contour_num
+                break
+        
         frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
         self.show_screen('level')
         start_time = time.perf_counter()
