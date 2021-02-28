@@ -398,6 +398,7 @@ class Game():
             pass 
         if "start_mult" in packet and self.creator == 0:
             self.multi_start = 1
+            self.num_users = packet["start_mult"]
         if "winner" in packet:
             ### implement picture upload logic 
             self.round_num = packet["round_num"]
@@ -810,7 +811,7 @@ class Game():
                         continue
                     packet = {
                         "username": ''.join(self.nickname),
-                        "start_mult": True
+                        "start_mult": self.num_users
                     }
                     self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
                     f = open("do_not_join.txt", "w")
