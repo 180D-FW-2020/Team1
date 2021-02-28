@@ -351,10 +351,8 @@ class Game():
                 for w in sorted_keys:
                     sorted_totals[w] = self.total_scores[w]
 
-                """
-                implement csv logic here
-                """
-                if self.round_num == self.num_users + 1:
+                if self.round_num >= self.num_users + 1:
+                    self.round_num = 0
                     packet = {
                         "username": ''.join(self.nickname),
                         "round_over": total,
@@ -375,8 +373,7 @@ class Game():
                 self.round_scores = {}
                 self.max_multi_score_round = -1 
                 self.round_score_leader = ''
-                if self.round_num == self.num_users + 1:
-                    self.round_num = 1
+                
         if "player_left" in packet:
             self.show_screen('', generic_txt='Someone left the game. Ending game now.')
             self.game()
