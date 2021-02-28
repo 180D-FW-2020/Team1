@@ -890,8 +890,8 @@ class Game():
                                 point2 = points[pair[1]]
 
                                 if point1 and point2:
-                                    cv2.line(frame, tuple(point1), tuple(point2), (0, 255, 255), 2)
-                                    cv2.circle(frame, tuple(point1), 8, (0, 0, 255), thickness=-1, lineType=cv2.FILLED)
+                                    cv2.line(frame, tuple(point1), tuple(point2), self.PoseEstimator.SKELETON_LINECOLOR, 2)
+                                    cv2.circle(frame, tuple(point1), 8, self.PoseEstimator.SKELETON_POINTCOLOR, thickness=-1, lineType=cv2.FILLED)
                             cv2.imshow(WINDOWNAME, frame)
                             cv2.imwrite('pose.jpg',frame)
                             key = cv2.waitKey(2000)
@@ -1217,19 +1217,25 @@ class Game():
         # print('time remaining', time_remaining)
         return frame, time_remaining, original
     
+    old_contour_num = 0
     def level(self):
         self.play = True
         timer_old = self.TIMER_THRESHOLD
         
-        if self.difficulty == 0:
-            contour_num = random.randint(0,len(easy_contours)-1)
-            contour = easy_contours[contour_num]
-        elif self.difficulty == 1:
-            contour_num = random.randint(0,len(medium_contours)-1)
-            contour = medium_contours[contour_num]
-        if self.difficulty == 2:
-            contour_num = random.randint(0,len(hard_contours)-1)
-            contour = hard_contours[contour_num]
+        while True:
+            if self.difficulty == 0:
+                contour_num = random.randint(0,len(easy_contours)-1)
+                contour = easy_contours[contour_num]
+            elif self.difficulty == 1:
+                contour_num = random.randint(0,len(medium_contours)-1)
+                contour = medium_contours[contour_num]
+            elif self.difficulty == 2:
+                contour_num = random.randint(0,len(hard_contours)-1)
+                contour = hard_contours[contour_num]
+            if contour_num != self.old_contour_num:
+                self.old_contour_num = contour_num
+                break
+        
         frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
         self.show_screen('level')
         start_time = time.perf_counter()
