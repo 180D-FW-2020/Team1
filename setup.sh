@@ -3,7 +3,7 @@
 #list name of packages
 echo "installing base packages"
 conda create -y -n hitw python=3.8 numpy pandas joblib smbus2 paho-mqtt scikit-learn opencv=4.0.1 speechrecognition boto3 paramiko -c conda-forge
-conda activate hitw 
+# conda activate hitw 
 echo "finished" 
 
 # from distutils.core import setup, Extension 
