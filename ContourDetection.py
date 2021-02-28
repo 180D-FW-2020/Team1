@@ -21,11 +21,11 @@ class ContourDetection():
     @NOTE: accuracy is still around 50%. Need it to increase to about 80+%.
     @NOTE: 
     """
-    def isWithinContour(self, points, contour):
+    def isWithinContour(self, points, contour, height=480, width=640):
         count = 0 
         print(points)
         for point in points:
-            if point == None or point[1] >= 480 or point[0] >= 640:
+            if point == None or point[1] >= height or point[0] >= width:
                 continue
             # print(contour.item(point[1],point[0],0), contour.item(point[1],point[0],1), contour.item(point[1],point[0],2))
             if contour.item(point[1],point[0],0) < 65 and contour.item(point[1],point[0],1) < 65 and contour.item(point[1],point[0],2) < 65:
