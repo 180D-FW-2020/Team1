@@ -352,7 +352,6 @@ class Game():
                     sorted_totals[w] = self.total_scores[w]
 
                 if self.round_num >= self.num_users + 1:
-                    self.round_num = 0
                     packet = {
                         "username": ''.join(self.nickname),
                         "round_over": total,
@@ -361,6 +360,7 @@ class Game():
                         "round_num": self.round_num,
                         "pictures": True
                     }
+                    self.round_num = 0
                 else:
                     packet = {
                         "username": ''.join(self.nickname),
@@ -397,7 +397,8 @@ class Game():
             self.num_users = packet["start_mult"]
         if "winner" in packet:
             ### implement picture upload logic 
-            self.round_num = packet["round_num"]
+            if self.creator == 0: 
+                self.round_num = packet["round_num"]
             if packet["winner"] == ''.join(self.nickname):
                 pose = 'pose' + str(self.round_num) + '.jpg'
                 self.client_aws.upload_file('pose.jpg', self.room_name, pose)
