@@ -506,7 +506,7 @@ class Game():
                 right = np.concatenate((right, pics[i]), axis = 0)
             full = np.concatenate((right,left), axis=1)
             cv2.imshow(WINDOWNAME,full)
-            cv2.waitKey(0)
+            cv2.waitKey(2000)
         else:
             left = pics[0]
             for i in range(1, int(len(pics)/2)):
@@ -516,7 +516,7 @@ class Game():
                 right = np.concatenate((right, pics[i]), axis = 0)
             full = np.concatenate((left,right), axis=1)
             cv2.imshow(WINDOWNAME,full)
-            cv2.waitKey(0)    
+            cv2.waitKey(2000)    
         
 
     def show_screen(self, screen_type, points = 0, generic_txt = '', no_enter = 0):
