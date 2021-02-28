@@ -1310,8 +1310,8 @@ class Game():
                     point1 = points[pair[0]]
                     point2 = points[pair[1]]
                     if point1 and point2:
-                        cv2.line(frame, tuple(point1), tuple(point2), (0, 255, 255), 2)
-                        cv2.circle(frame, tuple(point1), 8, (0, 0, 255), thickness=-1, lineType=cv2.FILLED)
+                        cv2.line(frame, tuple(point1), tuple(point2), self.PoseEstimator.SKELETON_LINECOLOR, 2)
+                        cv2.circle(frame, tuple(point1), 8, self.PoseEstimator.SKELETON_POINTCOLOR, thickness=-1, lineType=cv2.FILLED)
                 cv2.imshow(WINDOWNAME, frame)
                 cv2.waitKey(2000)
                 self.send_my_pose = 0
