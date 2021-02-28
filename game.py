@@ -814,7 +814,7 @@ class Game():
                         time_elapsed = int(time.perf_counter() - start_time)
                         time_remaining = 10 - time_elapsed
                         contour_weight = 1
-                        contour, _ = self.PoseEstimator.getContourFromPoints(self.pose)
+                        contour, _ = self.PoseEstimator.getContourFromPoints(self.pose, self.height, self.width)
                         contour = cv2.bitwise_not(contour)
                         if self.current_powerup == 'mirror':
                             contour = cv2.flip(contour,1)
@@ -837,7 +837,7 @@ class Game():
                         if time_remaining <= -1: 
                             time_remaining = 0
                             original, points = self.PoseEstimator.getSkeleton(original)
-                            self.level_score = self.PoseDetector.isWithinContour(points, contour)
+                            self.level_score = self.PoseDetector.isWithinContour(points, contour, self.height, self.width)
                             for pair in self.PoseEstimator.POSE_PAIRS:
                                 point1 = points[pair[0]]
                                 point2 = points[pair[1]]
@@ -1362,17 +1362,6 @@ class Game():
         while True:
             self.show_screen('waiting_for_new_pose')
             self.show_screen('level_end_multi')
-            # we got a new pose 
-            # for i in range(len(self.pose)):
-            #     self.pose[i] = tuple(self.pose[i])
-            # _, _ = self.PoseEstimator.getContourFromPoints(self.pose)
-            # contour = cv2.imread('Output-Contour.jpg')
-            # contour = cv2.bitwise_not(contour)
-            # while True:
-            #     key = cv2.waitKey(1)
-            #     _, frame = self.cap.read()
-            #     # frame = cv2.addWeighted(frame,self.uservid_weight,contour,1,0)
-            #     cv2.imshow(WINDOWNAME, frame)
             
     def multiplayer(self):
         self.show_screen('room')
