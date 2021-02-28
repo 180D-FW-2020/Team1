@@ -505,7 +505,7 @@ class Game():
             for i in range(int(len(pics)/2) + 1, len(pics)):
                 right = np.concatenate((right, pics[i]), axis = 0)
             full = np.concatenate((right,left), axis=1)
-            cv2.imshow('full',full)
+            cv2.imshow(WINDOWNAME,full)
             cv2.waitKey(0)
         else:
             left = pics[0]
@@ -515,7 +515,7 @@ class Game():
             for i in range(int(len(pics)/2) + 1, len(pics)):
                 right = np.concatenate((right, pics[i]), axis = 0)
             full = np.concatenate((left,right), axis=1)
-            cv2.imshow('full',full)
+            cv2.imshow(WINDOWNAME,full)
             cv2.waitKey(0)    
         
 
@@ -945,8 +945,8 @@ class Game():
                         self.show_pictures()
                         self.display_pictures = 0
                     return
-                if self.move_on == 1 and self.creator == 1:
-                    return
+                    # if self.move_on == 1 and self.creator == 1:
+                    #     return
         elif screen_type == 'waiting_for_others_pose':
             self.next_leader = 0
             cv2.putText(frame, "Waiting for other users to match your pose",(140,220), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
