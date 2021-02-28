@@ -506,7 +506,6 @@ class Game():
                 right = np.concatenate((right, pics[i]), axis = 0)
             full = np.concatenate((right,left), axis=1)
             cv2.imshow(WINDOWNAME,full)
-            cv2.waitKey(2000)
         else:
             left = pics[0]
             for i in range(1, int(len(pics)/2)):
@@ -516,7 +515,7 @@ class Game():
                 right = np.concatenate((right, pics[i]), axis = 0)
             full = np.concatenate((left,right), axis=1)
             cv2.imshow(WINDOWNAME,full)
-            cv2.waitKey(2000)    
+        cv2.waitKey(5000)    
         
 
     def show_screen(self, screen_type, points = 0, generic_txt = '', no_enter = 0):
@@ -798,7 +797,8 @@ class Game():
                 for key, value in user_info.items():
                     cv2.putText(frame, "{} is in the lobby.".format(value),(200,240 + i*25), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     i += 1
-                cv2.putText(frame, "Press Enter to Start the Game".format(ROOM+''.join(self.room)),(140,220), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                cv2.putText(frame, "Press Enter to Start the Game.",(140,200), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                cv2.putText(frame, "You're in room \'{}\'.".format(''.join(self.room)),(140,220), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                 cv2.imshow(WINDOWNAME, frame)
                 key = cv2.waitKey(10)
                 if key == ESC_KEY:
@@ -820,7 +820,8 @@ class Game():
                     self.client_aws.upload_file('do_not_join.txt', self.room_name, "do_not_join.txt")
                     return
         elif screen_type == 'waiting_for_creator':
-            cv2.putText(frame, "Please wait for creator to start the game".format(ROOM+''.join(self.room)),(140,220), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Please wait for creator to start game.",(140,200), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "You're in room \'{}\'.".format(''.join(self.room)),(140,220), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             while True:
                 key = cv2.waitKey(10)
