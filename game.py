@@ -489,13 +489,13 @@ class Game():
         implement display pictures
         '''
         pics = []
-        for user in range(self.num_users):
+        for user in range(self.num_users+1):
             self.client_aws.download_file(self.room_name, 'pose'+ str(user+1) + '.jpg', 'pose'+ str(user+1) + '.jpg')
             pic = cv2.imread('pose'+ str(user+1) + '.jpg')
             pics.append(pic)
             # cv2.imshow('picture',pic)
             # cv2.waitKey(0)
-        if self.num_users % 2 == 1: # then concatenate first half + 1 vertically and next one vertically
+        if (self.num_users+1) % 2 == 1: # then concatenate first half + 1 vertically and next one vertically
             left = pics[0]
             add = np.zeros(shape=left.shape, dtype=np.uint8)
             for i in range(1, int(len(pics)/2)):
