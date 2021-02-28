@@ -232,7 +232,7 @@ class Game():
         self.round_num = 0
         self.max_multi_score_round = -1
         self.round_score_leader = ''
-
+        self.display_pictures = 0
         # @NOTE indexing should be same for round_scores and total_scores
     # start mqtt 
     def on_connect(self, client, userdata, flags, rc):
@@ -309,6 +309,8 @@ class Game():
             self.move_on = 1
             if self.pose_leader == ''.join(self.nickname):
                 self.level_score = packet["round_over"]
+            if "pictures" in packet:
+                self.display_pictures = 1
         if "gesture" in packet:
             print(packet["gesture"])
             self.on_gesture(packet["gesture"],user=user)
@@ -352,18 +354,29 @@ class Game():
                 """
                 implement csv logic here
                 """
-                packet = {
-                    "username": ''.join(self.nickname),
-                    "round_over": total,
-                    "scoreboard": sorted_totals,
-                    "winner": self.round_score_leader,
-                    "round_num": self.round_num
-                }
+                if self.round_num == self.num_users + 1:
+                    packet = {
+                        "username": ''.join(self.nickname),
+                        "round_over": total,
+                        "scoreboard": sorted_totals,
+                        "winner": self.round_score_leader,
+                        "round_num": self.round_num,
+                        "pictures": True
+                    }
+                    self.round_num = 1
+                else:
+                    packet = {
+                        "username": ''.join(self.nickname),
+                        "round_over": total,
+                        "scoreboard": sorted_totals,
+                        "winner": self.round_score_leader,
+                        "round_num": self.round_num
+                    }
                 self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
                 self.round_scores = {}
                 self.max_multi_score_round = -1 
                 self.round_score_leader = ''
-                
+
 
         if "player_left" in packet:
             self.show_screen('', generic_txt='Someone left the game. Ending game now.')
@@ -470,7 +483,41 @@ class Game():
         ## show rules first 
         self.mode = 2
         self.show_screen('tutorial')
+    def show_pictures(self):
+        '''
+        implement display pictures
+        '''
+        pics = []
+        for user in range(self.num_users):
+            self.client_aws.download_file(self.room_name, 'pose'+ str(user+1) + '.jpg', 'pose'+ str(user+1) + '.jpg')
+            pic = cv2.imread('pose'+ str(user+1) + '.jpg')
+            pics.append(pic)
+            # cv2.imshow('picture',pic)
+            # cv2.waitKey(0)
+        if self.num_users % 2 == 1: # then concatenate first half + 1 vertically and next one vertically
+            left = pics[0]
+            add = np.zeros(shape=left.shape, dtype=np.uint8)
+            for i in range(1, int(len(pics)/2)):
+                left = np.concatenate((left, pics[i]), axis = 0)
+            left = np.concatenate((left, add), axis = 0)
+            right = pics[int(len(pics)/2)]
+            for i in range(int(len(pics)/2) + 1, len(pics)):
+                right = np.concatenate((right, pics[i]), axis = 0)
+            full = np.concatenate((right,left), axis=1)
+            cv2.imshow('full',full)
+            cv2.waitKey(0)
+        else:
+            left = pics[0]
+            for i in range(1, int(len(pics)/2)):
+                left = np.concatenate((left, pics[i]), axis = 0)
+            right = pics[int(len(pics)/2)]
+            for i in range(int(len(pics)/2) + 1, len(pics)):
+                right = np.concatenate((right, pics[i]), axis = 0)
+            full = np.concatenate((left,right), axis=1)
+            cv2.imshow('full',full)
+            cv2.waitKey(0)    
         
+
     def show_screen(self, screen_type, points = 0, generic_txt = '', no_enter = 0):
         frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
         txt = ''
@@ -893,6 +940,9 @@ class Game():
                     cv2.imshow(WINDOWNAME, frame)
                     cv2.waitKey(2000)
                     self.score_received = 0
+                    if self.display_pictures == 1:
+                        self.show_pictures()
+                        self.display_pictures = 0
                     return
                 if self.move_on == 1 and self.creator == 1:
                     return
@@ -1446,6 +1496,19 @@ class Game():
         #     cv2.imshow(WINDOWNAME, frame)
         pass 
     def __del__(self):
+        if self.mode == 1 and self.room_name != '' and len(self.nickname) > 0 and self.creator == 1:
+            try: 
+                s3 = boto3.resource(
+                    's3',
+                    aws_access_key_id=ACCESS_KEY,
+                    aws_secret_access_key=SECRET_KEY
+                )
+                bucket = s3.Bucket(self.room_name)
+                for key in bucket.objects.all():
+                    key.delete()
+                bucket.delete()
+            except:
+                print('deleting')
         self.voice.stop()
         packet = {
             "username": 'cancel',
