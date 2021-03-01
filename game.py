@@ -1,7 +1,6 @@
 """
 game.py: file to run the program
 overall handler for the output to user
-@TODO: 
 """
 from PoseEstimation import *
 from ContourDetection import *
@@ -21,7 +20,6 @@ from botocore.client import ClientError
 import threading
 import key
 
-# NOTE move power up/gesture txt down for multiplayer
 region='us-east-1'
 ROOM = 'ece180d-team1-room-'
 
@@ -49,15 +47,15 @@ except AttributeError:
     raspi = False 
     print('No Raspberry Pi detected, check key.py to verify connection information.')
 
-# mfile.write("Hello World!")
-# mfile.close()
-
-connection_string = "ece180d/team1"
-
-# 1 to see all the contours, 2 to see the points after contour detection, 3 for testing the pause button
+# DEBUG: 
+# 0 for regular
+# 1 to see all the contours
+# 2 to see the points after contour detection
+# 3 for testing the pause button
 DEBUG = 0
 
 # KEY Definitions
+BACK_KEY = 8
 ENTER_KEY = 13
 ESC_KEY = 27
 UP_KEY = 38
@@ -66,15 +64,6 @@ ZERO_KEY = 48
 ONE_KEY = 49
 TWO_KEY = 50
 THREE_KEY = 51 
-BACK_KEY = 8
-
-STATE_WAITING_FOR_CREATOR = 0
-STATE_WAITING_FOR_POSE_RECEIPT = 1
-STATE_GOT_POSE = 2
-STATE_MY_TURN = 3
-
-TIMER_THRESHOLD_SMALL = 5
-
 
 # WINDOW Definition 
 WINDOWNAME = 'Hole in the Wall!'
@@ -116,7 +105,6 @@ if DEBUG == 1:
     for picture in easy_contours:
         cv2.imshow('test', picture)
         cv2.waitKey(0)
-
 
 class Game():
     def __init__(self):
@@ -188,7 +176,7 @@ class Game():
         self.bucket = None
         self.creator = 0 # 1 for creator, 0 for joiner 
         self.room_name = '' 
-        self.multi_start = 0 #should we start or no (creator tells the rest)
+        self.multi_start = 0 # 1 to start game (creator tells the rest)
 
         # User variables
         self.user_score = 0
@@ -201,7 +189,7 @@ class Game():
         self.play = False
         self.reset_timer = -1
 
-        # multi user variables
+        # multiplayer user variables
         self.send_my_pose = 0 #1 means I'm the pose leader --> local user makes a pose
         self.move_on = 1 #1 means round is over, creator chooses next pose leader --> CREATOR only 
         self.pose_updated = 0 #1 means pose leader sent pose over mqtt --> ALL users should fit in hole 
@@ -209,11 +197,11 @@ class Game():
         self.pose = [] # the pose we received from the pose leader 
         self.next_leader = 0 #1 means next leader has been chosen, move on to pose stuff
         self.level_score = 0
-        # self.my_state
         self.score_received = 0
         self.pose_leader = ''
         self.round_scores = {} # creator keeps track of who got what score that specific round -- emptied after each round ends 
         self.total_scores = {} # creator keeps track of who has what score ovreal -- never empties 
+                               # NOTE indexing should be same for round_scores and total_scores
         self.multi_powerups = ['double_points', 'mirror', 'lights_out']
         """ powerup list for multiplayer:
         1. double_points: for pose leader -- gets 2*(15-average of other people's scores) for the round
@@ -233,8 +221,8 @@ class Game():
         self.max_multi_score_round = -1
         self.round_score_leader = ''
         self.display_pictures = 0
-        # @NOTE indexing should be same for round_scores and total_scores
-    # start mqtt 
+        self.lobby_users = []
+        
     def on_connect(self, client, userdata, flags, rc):
         print("Connection returned result: "+str(rc))
         
@@ -272,7 +260,7 @@ class Game():
                     self.TIMER_THRESHOLD += int(time.perf_counter() - self.reset_timer)
                     self.reset_timer = -1
         else: 
-            if user != ''.join(self.nickname):
+            if user != self.nickname:
                 return
             if gesture == 'wave':
                 if self.generated_powerup == 'lights_out':
@@ -291,13 +279,12 @@ class Game():
         print('Received message: "' + str(message.payload) + '" on topic "' +
         message.topic + '" with QoS ' + str(message.qos))
         packet = json.loads(message.payload)
-        # print(packet["username"])
         user = packet["username"]
 
         if "leader" in packet:
             self.next_leader = 1
             self.pose_leader = packet["leader"]
-            if packet["leader"] == ''.join(self.nickname): ## I am the leader 
+            if packet["leader"] == self.nickname: ## I am the leader 
                 self.send_my_pose = 1
             else: ## ___ is the leader 
                 self.pose_updated = 0 
@@ -307,14 +294,14 @@ class Game():
             self.waiting_for_others = 0
             self.current_powerup = ''
             self.move_on = 1
-            if self.pose_leader == ''.join(self.nickname):
+            if self.pose_leader == self.nickname:
                 self.level_score = packet["round_over"]
             if "pictures" in packet:
                 self.display_pictures = 1
         if "gesture" in packet:
             print(packet["gesture"])
             self.on_gesture(packet["gesture"],user=user)
-        if "send_my_pose" in packet and user != ''.join(self.nickname):
+        if "send_my_pose" in packet and user != self.nickname:
             self.pose_updated = 1
             self.current_powerup = packet["send_my_pose"] 
             self.pose = packet["pose"]
@@ -325,8 +312,6 @@ class Game():
             self.total_scores = packet["scoreboard"]
             self.score_received = 1
         if "score" in packet and self.creator == 1:
-            # print(packet["score"])
-            # indicate next round
             score = packet["score"]
             self.round_scores[user] = score
             self.total_scores[user] += score
@@ -353,7 +338,7 @@ class Game():
 
                 if self.round_num >= self.num_users + 1:
                     packet = {
-                        "username": ''.join(self.nickname),
+                        "username": self.nickname,
                         "round_over": total,
                         "scoreboard": sorted_totals,
                         "winner": self.round_score_leader,
@@ -363,7 +348,7 @@ class Game():
                     self.round_num = 0
                 else:
                     packet = {
-                        "username": ''.join(self.nickname),
+                        "username": self.nickname,
                         "round_over": total,
                         "scoreboard": sorted_totals,
                         "winner": self.round_score_leader,
@@ -373,43 +358,41 @@ class Game():
                 self.round_scores = {}
                 self.max_multi_score_round = -1 
                 self.round_score_leader = ''
-                
         if "player_left" in packet:
             self.show_screen('', generic_txt='Someone left the game. Ending game now.')
             self.game()
-        if "join" in packet and self.creator == 1: # assuming initial message sends score
-            # implement some stuff creator has to do when new players join via mqtt 
-            # print(packet["join"])
-            if packet["join"] == True:
-                # joining 
-                # if self.num_users == 4:
-                #     pass # don't let them join, implement later 
-                f = open("room_info.csv", "a")
-                f.write('{},{}\n'.format(user, 0))
-                f.close()
-                self.client_aws.upload_file('room_info.csv', self.room_name, "room_info.csv")
-                self.num_users += 1
-                self.users[self.num_users] = user
-                self.total_scores[user] = 0
-            pass 
+        if "join" in packet and self.creator == 1:         
+            f = open("room_info.csv", "a")
+            f.write('{},{}\n'.format(user, 0))
+            f.close()
+            self.client_aws.upload_file('room_info.csv', self.room_name, "room_info.csv")
+            self.num_users += 1
+            self.users[self.num_users] = user
+            self.total_scores[user] = 0
+            send_joined_users = []
+            for _, cur_user in self.users.items():
+                send_joined_users.append(cur_user)
+            packet = {
+                "username": self.nickname,
+                "lobby_users": send_joined_users
+            }
+            self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
         if "start_mult" in packet and self.creator == 0:
             self.multi_start = 1
             self.num_users = packet["start_mult"]
         if "winner" in packet:
-            ### implement picture upload logic 
             if self.creator == 0: 
                 self.round_num = packet["round_num"]
-            if packet["winner"] == ''.join(self.nickname):
+            if packet["winner"] == self.nickname:
                 pose = 'pose' + str(self.round_num) + '.jpg'
                 self.client_aws.upload_file('pose.jpg', self.room_name, pose)
-           
+        if "lobby_users" in packet and self.creator == 0:
+            self.lobby_users = packet["lobby_users"]
 
-    # end mqtt
     def createaws(self):
         valid = 0
         try:
             self.bucket = self.client_aws.create_bucket(Bucket= self.room_name)
-            # print(self.bucket)
         except:
             self.show_screen('could_not_create')
             valid = 1
@@ -420,21 +403,20 @@ class Game():
             self.show_screen('',generic_txt='Room not available. Please try again.')
             self.game()
         except ClientError as e:
-            #print('does not exist') ## you're the creator 
             try:
                 self.client_aws.head_object(Bucket=self.room_name, Key='room_info.csv')
             except ClientError as e:
                 self.creator = 1 
-                self.users[self.num_users] = ''.join(self.nickname)
-                self.total_scores[''.join(self.nickname)] = 0
+                self.users[self.num_users] = self.nickname
+                self.total_scores[self.nickname] = 0
                 self.client_mqtt.subscribe(self.room_name, qos=1)
                 packet = {
-                    "username": ''.join(self.nickname)
+                    "username": self.nickname
                 }
                 self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
                 print(self.room_name)
                 f = open("room_info.csv", "w")
-                f.write('{},{}\n'.format(''.join(self.nickname),self.user_score))
+                f.write('{},{}\n'.format(self.nickname,self.user_score))
                 f.close()
                 self.client_aws.upload_file('room_info.csv', self.room_name, "room_info.csv")
                 #local file name, bucket, remote file name
@@ -444,7 +426,7 @@ class Game():
             self.client_mqtt.subscribe(self.room_name, qos=1)
             print(self.room_name)
             packet = {
-                "username": ''.join(self.nickname),
+                "username": self.nickname,
                 "join": True
             }
             self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
@@ -482,16 +464,11 @@ class Game():
         self.mode = 2
         self.show_screen('tutorial')
     def show_pictures(self):
-        '''
-        implement display pictures
-        '''
         pics = []
         for user in range(self.num_users+1):
             self.client_aws.download_file(self.room_name, 'pose'+ str(user+1) + '.jpg', 'pose'+ str(user+1) + '.jpg')
             pic = cv2.imread('pose'+ str(user+1) + '.jpg')
             pics.append(pic)
-            # cv2.imshow('picture',pic)
-            # cv2.waitKey(0)
         if (self.num_users+1) % 2 == 1: # then concatenate first half + 1 vertically and next one vertically
             left = pics[0]
             add = np.zeros(shape=left.shape, dtype=np.uint8)
@@ -512,9 +489,8 @@ class Game():
                 right = np.concatenate((right, pics[i]), axis = 0)
             full = np.concatenate((left,right), axis=1)
             cv2.imshow(WINDOWNAME,full)
-        cv2.waitKey(5000)    
+        cv2.waitKey(5000) 
         
-
     def show_screen(self, screen_type, points = 0, generic_txt = '', no_enter = 0):
         frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
         txt = ''
@@ -688,7 +664,7 @@ class Game():
         elif screen_type == 'room':
             cv2.putText(frame, "Enter a 6-character room code:",(115,220), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             for i in range(len(self.room)):
-                cv2.putText(frame, self.room[i], (115 + 20*i,300), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                cv2.putText(frame, self.room[i], (145 + 20*i,240), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             num = 0
 
@@ -712,7 +688,7 @@ class Game():
                     frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
                     cv2.putText(frame, "Enter a 6-character room code:",(115,220), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     for i in range(len(self.room)):
-                        cv2.putText(frame, self.room[i], (115 + 20*i,300), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                        cv2.putText(frame, self.room[i], (145 + 20*i,240), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.imshow(WINDOWNAME, frame)
         elif screen_type == 'nickname':
             cv2.putText(frame, "Nickname:",(115,220), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
@@ -734,7 +710,7 @@ class Game():
                     frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
                     cv2.putText(frame, "Nickname:",(115,220), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     for i in range(len(self.nickname)):
-                        cv2.putText(frame, self.nickname[i], (115 + 20*i,300), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                        cv2.putText(frame, self.nickname[i], (145 + 20*i,240), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     cv2.imshow(WINDOWNAME, frame)
             return
         elif screen_type == 'no_room':
@@ -785,8 +761,6 @@ class Game():
                     cv2.imshow(WINDOWNAME, frame)
             return
         elif screen_type == 'start_game_multi':
-            cv2.putText(frame, "Press Enter to Start the Game".format(ROOM+''.join(self.room)),(140,220), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
-            cv2.imshow(WINDOWNAME, frame)
             while True:
                 frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
                 i = 0
@@ -807,7 +781,7 @@ class Game():
                     if self.num_users < 1:
                         continue
                     packet = {
-                        "username": ''.join(self.nickname),
+                        "username": self.nickname,
                         "start_mult": self.num_users
                     }
                     self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
@@ -817,10 +791,19 @@ class Game():
                     self.client_aws.upload_file('do_not_join.txt', self.room_name, "do_not_join.txt")
                     return
         elif screen_type == 'waiting_for_creator':
-            cv2.putText(frame, "Please wait for creator to start game.",(140,200), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
-            cv2.putText(frame, "You're in room \'{}\'.".format(''.join(self.room)),(140,220), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
-            cv2.imshow(WINDOWNAME, frame)
             while True:
+                frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
+                i = 0
+                if len(self.lobby_users) > 0:
+                    cv2.putText(frame, "Please wait for {} to start the game.".format(self.lobby_users[0]),(140,200), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "You're in room \'{}\'.".format(''.join(self.room)),(140,220), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                    for cur_user in self.lobby_users:
+                        cv2.putText(frame, "{} is in the lobby.".format(cur_user),(200,240 + i*25), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                        i += 1
+                else:
+                    cv2.putText(frame, "Initializing...",(140,200), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                
+                cv2.imshow(WINDOWNAME, frame)    
                 key = cv2.waitKey(10)
                 if key == ESC_KEY:
                     self.__del__()
@@ -878,7 +861,6 @@ class Game():
                         if self.current_powerup != '':
                             cv2.putText(frame, "{} used the {} powerup on you!".format(self.pose_leader,self.current_powerup), (10, 450), FONT, FONTSCALE - 0.25, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
 
-                        # cv2.putText(frame, "Score: {}".format(self.user_score), (500, 50), FONT, FONTSCALE, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                         cv2.imshow(WINDOWNAME, frame)
                         if time_remaining <= -1: 
                             time_remaining = 0
@@ -895,7 +877,7 @@ class Game():
                             cv2.imwrite('pose.jpg',frame)
                             key = cv2.waitKey(2000)
                             packet = {
-                                "username": ''.join(self.nickname),
+                                "username": self.nickname,
                                 "score": self.level_score
                             }
                             self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
@@ -920,7 +902,7 @@ class Game():
                     time_remaining = 60 - time_elapsed
                     if time_remaining <= -1: 
                         packet = {
-                            "username": ''.join(self.nickname),
+                            "username": self.nickname,
                             "player_left": 1
                         }
                         self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
@@ -965,7 +947,7 @@ class Game():
                     time_remaining = 60 - time_elapsed
                     if time_remaining <= -1: 
                         packet = {
-                            "username": ''.join(self.nickname),
+                            "username": self.nickname,
                             "player_left": 1
                         }
                         self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
@@ -1194,8 +1176,6 @@ class Game():
             col_bias = 20
             rows1,cols1,channels1 = powerup.shape
             rows2,cols2,channels2 = frame.shape
-            # print(rows2-rows1- row_bias, rows2-row_bias)
-            # print((cols2-cols1-col_bias),(cols2-col_bias))
             row_1 = rows2 - rows1 - row_bias
             row_2 = rows2 - row_bias
             col_1 = cols2 - cols1 - col_bias
@@ -1213,7 +1193,6 @@ class Game():
         
         cv2.putText(frame, "Time Remaining: {}".format(time_remaining), (10, 50), FONT, FONTSCALE, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
         cv2.putText(frame, "Score: {}".format(self.user_score), (500, 50), FONT, FONTSCALE, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
-        # print('time remaining', time_remaining)
         return frame, time_remaining, original
     
     old_contour_num = 0
@@ -1235,11 +1214,11 @@ class Game():
                 self.old_contour_num = contour_num
                 break
         
+        contour = cv2.flip(contour,1)
         frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
         self.show_screen('level')
         start_time = time.perf_counter()
-        # print(start_time)
-        override_time=False
+        override_time = False
         stop = False
         while True:
             key = cv2.waitKey(1)
@@ -1271,15 +1250,14 @@ class Game():
                             exit(0)
                         elif new_key == ENTER_KEY:
                             self.game()
-                        
             else: # use only gesture code 
                 pass
             if self.slow_down_used == True:
                 self.TIMER_THRESHOLD *= 2
                 self.slow_down_used = False
             
-              
             _, frame = self.cap.read()
+            frame = cv2.flip(frame,1)
             frame, time_remaining, original = self.editFrame(frame, start_time, contour, override_time=override_time)
             cv2.imshow(WINDOWNAME, frame)
             if override_time == True and stop == False:
@@ -1293,8 +1271,6 @@ class Game():
                 while True:
                     if cv2.waitKey(100):
                         break
-                # print('original shape', original.shape)
-                # print(contour.shape)
                 frame, points = self.PoseEstimator.getPoints(original)
                 level_score = self.PoseDetector.isWithinContour(points, contour)
                 if DEBUG == 2:
@@ -1326,7 +1302,6 @@ class Game():
                 self.TIMER_THRESHOLD -= 2
     def send_pose(self):
         global rand_int
-        ## include screen to say "you're up"
         self.powerup_used = 0 # set this when powerup is used
         self.move_on = 0
         start_time = time.perf_counter()
@@ -1338,8 +1313,6 @@ class Game():
             key = cv2.waitKey(1)
             _, frame = self.cap.read()
             frame = cv2.flip(frame, 1)
-            # frame, time_remaining, original = self.editFrame(frame, start_time, contour, override_time=override_time)
-            
             time_elapsed = int(time.perf_counter() - start_time)
             time_remaining = 10 - time_elapsed
             if time_remaining <= -1:
@@ -1365,7 +1338,7 @@ class Game():
                 cv2.waitKey(2000)
                 self.send_my_pose = 0
                 packet = {
-                    "username": ''.join(self.nickname),
+                    "username": self.nickname,
                     "send_my_pose": self.current_powerup,
                     "pose": points
                 }
@@ -1378,15 +1351,15 @@ class Game():
         cur_user = 0
         while True:
             ## send message to person whose turn it is 
-            if self.move_on == 0: #and self.users[cur_user] != ''.join(self.nickname):
+            if self.move_on == 0: #and self.users[cur_user] != self.nickname:
                 self.show_screen('waiting_for_new_pose')
                 self.show_screen('level_end_multi')
             
             elif self.move_on == 1:
-                if self.users[cur_user] == ''.join(self.nickname):
+                if self.users[cur_user] == self.nickname:
                     print('it\'s {}\'s turn'.format(self.users[cur_user]))
                     packet = {
-                        "username": ''.join(self.nickname),
+                        "username": self.nickname,
                         "leader": self.users[cur_user]
                     }
                     self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
@@ -1397,7 +1370,7 @@ class Game():
                     self.show_screen('level_end_multi')
                 else:
                     packet = {
-                        "username": ''.join(self.nickname),
+                        "username": self.nickname,
                         "leader": self.users[cur_user]
                     }
                     print('it\'s {}\'s turn'.format(self.users[cur_user]))
@@ -1419,7 +1392,7 @@ class Game():
         print(self.room_name)
         self.createaws()
         if raspi: 
-            self.remote_connection.set_conn_info('m', ''.join(self.nickname), ''.join(self.room))
+            self.remote_connection.set_conn_info('m', self.nickname, ''.join(self.room))
             x = threading.Thread(target = self.remote_connection.run, daemon=True)
             x.start()
         if self.creator == 1:
@@ -1439,7 +1412,6 @@ class Game():
         self.show_screen('start')
         self.nickname = []
         self.password = []
-        # self.createorjoin = 0
         self.room = ['*','*','*','*','*','*']
         if self.mode == 0:
             self.singleplayer()
@@ -1453,42 +1425,6 @@ class Game():
             print('error')
             exit(1)
 
-    def test(self):
-        # frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
-        # example_arr = [None, (352, 296), (320, 296), None, None, (416, 160), (296, 112), (256, 120), (352, 120), None, None, (488, 168), None, None, (440, 160)]
-        # output = contour_pictures[0]
-        # count = 0 
-        # for point in example_arr:
-        #     if point == None or point[0] > 480 or point[1] > 640:
-        #         continue
-        #         # cv2.circle(output, (point[0],point[1]), 8, (0, 255, 255), thickness=-1, lineType=cv2.FILLED)
-        #     if output[point[0],point[1],0] > 20 and output[point[0],point[1],1] > 20 and output[point[0],point[1],2] > 20:
-        #         count +=1
-        # for point in example_arr:
-        #     if point != None:
-        #         cv2.circle(output, (point[0],point[1]), 8, (0, 255, 255), thickness=-1, lineType=cv2.FILLED)
-        # print(count)
-        # cv2.imshow('test',output)
-        # while True:
-        #     if cv2.waitKey(0):
-        #         break
-        # 
-        # 
-        # 
-        # 
-        
-        
-        
-        
-        # contour = cv2.imread('Output-Contour.jpg')
-        # contour = cv2.bitwise_not(contour)
-        # print(contour.shape)
-        # while True: 
-        #     _, frame = self.cap.read()
-        #     # print(frame.shape)
-        #     # frame = cv2.addWeighted(frame,self.uservid_weight,contour,1,0)
-        #     cv2.imshow(WINDOWNAME, frame)
-        pass 
     def __del__(self):
         if self.mode == 1 and self.room_name != '' and len(self.nickname) > 0 and self.creator == 1:
             try: 
@@ -1513,11 +1449,10 @@ class Game():
         else: 
             self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
         self.cap.release() 
-        cv2.destroyAllWindows() 
+        cv2.destroyAllWindows()
         self.client_mqtt.loop_stop()
         self.client_mqtt.disconnect() 
-          
-
+        
 def main():
     game = Game()
     game.game()
