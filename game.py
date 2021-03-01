@@ -222,7 +222,7 @@ class Game():
         self.round_score_leader = ''
         self.display_pictures = 0
         self.lobby_users = []
-
+        
     def on_connect(self, client, userdata, flags, rc):
         print("Connection returned result: "+str(rc))
         
@@ -489,8 +489,8 @@ class Game():
                 right = np.concatenate((right, pics[i]), axis = 0)
             full = np.concatenate((left,right), axis=1)
             cv2.imshow(WINDOWNAME,full)
-        cv2.waitKey(5000)    
-
+        cv2.waitKey(5000) 
+        
     def show_screen(self, screen_type, points = 0, generic_txt = '', no_enter = 0):
         frame = np.zeros(shape=[self.height, self.width, 3], dtype=np.uint8)
         txt = ''
