@@ -77,6 +77,8 @@ else:
     cv2.namedWindow(WINDOWNAME, cv2.WND_PROP_FULLSCREEN)
     cv2.setWindowProperty(WINDOWNAME,cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
 
+MAC_ASPECT_RATIO = (720, 1280)
+
 # FILESYSTEM Definitions 
 GRAPHICS = os.path.join(os.path.curdir, 'graphics')
 POSES = os.path.join(GRAPHICS, 'poses')
@@ -97,6 +99,8 @@ for difficulty in DIFFICULTIES:
     for contour_file in os.listdir(difficulty):
         img = cv2.imread(os.path.join(difficulty, contour_file))
         img = cv2.bitwise_not(img)
+        if OS == 'Darwin':
+            img = cv2.resize(img, MAC_ASPECT_RATIO)
         if difficulty == os.path.join(POSES, 'easy'):
             easy_contours.append(img)
         if difficulty == os.path.join(POSES, 'medium'):
