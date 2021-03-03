@@ -12,6 +12,7 @@ import time
 import numpy as np
 import random
 import os
+import platform
 import paho.mqtt.client as mqtt
 import json
 import boto3
@@ -22,6 +23,8 @@ import key
 
 region='us-east-1'
 ROOM = 'ece180d-team1-room-'
+
+OS = platform.system()
 
 FONTCOLORWHITE = (255,255,255)
 FONTCOLORBLACK = (0,0,0)
@@ -67,8 +70,12 @@ THREE_KEY = 51
 
 # WINDOW Definition 
 WINDOWNAME = 'Hole in the Wall!'
-cv2.namedWindow(WINDOWNAME, cv2.WND_PROP_FULLSCREEN)
-cv2.setWindowProperty(WINDOWNAME,cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
+if(OS == 'Darwin'): 
+    cv2.namedWindow(WINDOWNAME, cv2.WND_PROP_FULLSCREEN)
+    cv2.setWindowProperty(WINDOWNAME,cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
+else:
+    cv2.namedWindow(WINDOWNAME, cv2.WND_PROP_FULLSCREEN)
+    cv2.setWindowProperty(WINDOWNAME,cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
 
 # FILESYSTEM Definitions 
 GRAPHICS = os.path.join(os.path.curdir, 'graphics')
@@ -1451,7 +1458,6 @@ class Game():
         cv2.destroyAllWindows()
         self.client_mqtt.loop_stop()
         self.client_mqtt.disconnect() 
-        self.voice.stop()
         
 def main():
     game = Game()
