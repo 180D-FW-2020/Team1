@@ -1146,7 +1146,10 @@ class Game():
                     cv2.putText(frame, "Time Remaining: {}".format(0), (10, 50), FONT, FONTSCALE, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                 else:
                     cv2.putText(frame, "Time Remaining: {}".format(time_remaining), (10, 50), FONT, FONTSCALE, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
-                cv2.putText(frame, "Step in the Contour.", (375, 50), FONT, FONTSCALE, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                if OS == 'Darwin':
+                    cv2.putText(frame, "Step in the Contour.", self.rescale((375, 50),'up'), FONT, FONTSCALE, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                else:
+                    cv2.putText(frame, "Step in the Contour.", (375, 50), FONT, FONTSCALE, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                 cv2.imshow(WINDOWNAME, frame)
                 if time_remaining <= -1:
                     ## check their pose 
@@ -1313,6 +1316,17 @@ class Game():
             self.level()
             if self.TIMER_THRESHOLD > 5:
                 self.TIMER_THRESHOLD -= 2
+    
+    def rescale(self, point, direction):
+        if direction == 'up': # go from (480,640) --> aspect_ratio
+            width = int(self.width*point[0]/640)
+            height = int(self.height*point[1]/480)
+            return (width,height)
+        elif direction == 'down':
+            width = int(640*point[0]/self.width)
+            height = int(480*point[1]/self.height)
+            return (width,height)
+    
     def send_pose(self):
         global rand_int
         self.powerup_used = 0 # set this when powerup is used
@@ -1349,7 +1363,7 @@ class Game():
                         cv2.circle(frame, tuple(point1), 8, self.PoseEstimator.SKELETON_POINTCOLOR, thickness=-1, lineType=cv2.FILLED)
                 cv2.imshow(WINDOWNAME, frame)
                 cv2.waitKey(2000)
-                self.send_my_pose = 0
+                self.send_my_pose = 0                    
                 packet = {
                     "username": self.nickname,
                     "send_my_pose": self.current_powerup,
