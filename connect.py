@@ -17,15 +17,17 @@ class rpi_conn():
         self.ssh = paramiko.SSHClient()
         self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     
-    def connect(self):
+    def connect(self, raspi):
         try:
             self.ssh.connect(self.ip, self.port, self.user, self.password)
         except:
-            self.connected = False
+            raspi['success'] = False
             print("couldn\'t connect to Raspberry Pi, check connection information")
             return
-        self.connected = True
+            # return(self.connected) 
+        raspi['success'] = True
         print("connected to Raspberry Pi")
+        # return(self.connected) 
 
     def set_conn_info(self, mode='', nickname='', roomcode=''):       
         if mode == 'm': 

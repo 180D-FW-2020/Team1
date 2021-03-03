@@ -41,13 +41,13 @@ try:
     port = key.port
     user = key.user 
     password = key.password
-    raspi = True 
+    raspi = {'success': True} 
 except AttributeError:
     ip = ''
     port = ''
     user = ''
     password = ''
-    raspi = False 
+    raspi = {'success': False} 
     print('No Raspberry Pi detected, check key.py to verify connection information.')
 
 # DEBUG: 
@@ -119,6 +119,7 @@ if DEBUG == 1:
 
 class Game():
     def __init__(self):
+        global raspi
 
         # Capturing Video
         self.cap = cv2.VideoCapture(0)
@@ -156,9 +157,10 @@ class Game():
         self.num_users = 0
 
         # Raspberry Pi 
-        if raspi: 
+        if raspi['success']: 
+            raspi['success'] = False 
             self.remote_connection = rpi_conn(ip, port, user, password)
-            x = threading.Thread(target = self.remote_connection.connect, daemon=True)
+            x = threading.Thread(target = self.remote_connection.connect, args=(raspi,), daemon=True)
             x.start()
 
         # powerups
@@ -1311,7 +1313,7 @@ class Game():
         while self.difficulty == -1:
             self.show_screen('difficulty')
         self.client_mqtt.subscribe(ROOM, qos=1)
-        if raspi: 
+        if raspi['success']: 
             x = threading.Thread(target = self.remote_connection.run, daemon=True)
             x.start()
         while True:
@@ -1438,7 +1440,7 @@ class Game():
         self.room_name = ROOM + self.room_code
         print(self.room_name)
         self.createaws()
-        if raspi: 
+        if raspi['success']: 
             self.remote_connection.set_conn_info('m', self.nickname, self.room_code)
             x = threading.Thread(target = self.remote_connection.run, daemon=True)
             x.start()
@@ -1490,7 +1492,7 @@ class Game():
             "username": 'cancel',
             "disconnect": 'please'
         }
-        if raspi: 
+        if raspi['success']: 
             self.client_mqtt.publish(ROOM, json.dumps(packet), qos=1)
         else: 
             self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
