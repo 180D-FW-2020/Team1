@@ -1488,14 +1488,15 @@ class Game():
                 bucket.delete()
             except:
                 print('deleting')
-        packet = {
-            "username": 'cancel',
-            "disconnect": 'please'
-        }
         if raspi['success']: 
-            self.client_mqtt.publish(ROOM, json.dumps(packet), qos=1)
-        else: 
-            self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
+            packet = {
+                "username": 'cancel',
+                "disconnect": 'please'
+            }
+            if self.mode == 0: 
+                self.client_mqtt.publish(ROOM, json.dumps(packet), qos=1)
+            elif self.mode == 1: 
+                self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
         self.cap.release() 
         cv2.destroyAllWindows()
         self.client_mqtt.loop_stop()
