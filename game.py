@@ -1314,8 +1314,8 @@ class Game():
             self.show_screen('difficulty')
         self.client_mqtt.subscribe(ROOM, qos=1)
         if raspi['success']: 
-            x = threading.Thread(target = self.remote_connection.run, daemon=True)
-            x.start()
+            self.x = threading.Thread(target = self.remote_connection.run, daemon=True)
+            self.x.start()
         while True:
             self.level_number += 1
             self.slow_down_used = False
@@ -1442,8 +1442,8 @@ class Game():
         self.createaws()
         if raspi['success']: 
             self.remote_connection.set_conn_info('m', self.nickname, self.room_code)
-            x = threading.Thread(target = self.remote_connection.run, daemon=True)
-            x.start()
+            self.x = threading.Thread(target = self.remote_connection.run, daemon=True)
+            self.x.start()
         if self.creator == 1:
             self.creator_code()
         else: # regular user 
@@ -1475,6 +1475,7 @@ class Game():
             exit(1)
 
     def __del__(self):
+        self.voice.stop()
         if self.mode == 1 and self.room_name != '' and len(self.nickname) > 0 and self.creator == 1:
             try: 
                 s3 = boto3.resource(
@@ -1497,6 +1498,7 @@ class Game():
                 self.client_mqtt.publish(ROOM, json.dumps(packet), qos=1)
             elif self.mode == 1: 
                 self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
+        self.x.join()
         self.cap.release() 
         cv2.destroyAllWindows()
         self.client_mqtt.loop_stop()
