@@ -77,7 +77,7 @@ else:
     cv2.namedWindow(WINDOWNAME, cv2.WND_PROP_FULLSCREEN)
     cv2.setWindowProperty(WINDOWNAME,cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
 
-MAC_ASPECT_RATIO = (720, 1280)
+MAC_ASPECT_RATIO = (1280, 720)
 
 # FILESYSTEM Definitions 
 GRAPHICS = os.path.join(os.path.curdir, 'graphics')
@@ -1125,6 +1125,8 @@ class Game():
         self.mode = 3
         self.show_screen('calibrate')
         contour = cv2.imread(os.path.join(POSES, 'test.jpg'))
+        if OS == 'Darwin':
+            contour = cv2.resize(contour, MAC_ASPECT_RATIO)
         contour = cv2.bitwise_not(contour)
         valid_config = 0
         while valid_config == 0:
