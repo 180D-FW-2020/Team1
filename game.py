@@ -320,6 +320,7 @@ class Game():
                 save_points = []
                 for point in self.pose:
                     if point == None:
+                        save_points.append(None)
                         continue
                     save_points.append(self.rescale(point))
                 self.pose = save_points
@@ -1375,6 +1376,7 @@ class Game():
                     send_points = []
                     for point in points:
                         if point == None:
+                            send_points.append(None)
                             continue
                         send_points.append(self.rescale(point,'down'))
                     packet = {
