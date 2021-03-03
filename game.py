@@ -315,15 +315,14 @@ class Game():
         if "send_my_pose" in packet and user != self.nickname:
             self.pose_updated = 1
             self.current_powerup = packet["send_my_pose"] 
+            self.pose = packet["pose"]
             if OS == 'Darwin':
                 save_points = []
-                for point in points:
+                for point in self.pose:
                     if point == None:
                         continue
                     save_points.append(self.rescale(point))
                 self.pose = save_points
-            else: 
-                self.pose = packet["pose"]
             print(type(self.pose))
             print(packet["pose"])
             pass 
