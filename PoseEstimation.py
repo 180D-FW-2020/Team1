@@ -138,7 +138,7 @@ class PoseEstimation():
         points -> the OpenPose output points
     @TODO: create contour logic 
     """
-    def getContour(self, frame, show = False, height=480, width=640, output='Output-Contour.jpg'):
+    def getContour(self, frame, height=480, width=640, show = False, output='Output-Contour.jpg'):
         _, points = self.getPoints(frame)
 
         img = np.zeros((height, width, 3), np.uint8)
@@ -148,7 +148,7 @@ class PoseEstimation():
             partB = pair[1]
 
             if points[partA] and points[partB]:
-                cv2.line(img, points[partA], points[partB], 255, thickness=80, lineType=cv2.FILLED)
+                cv2.line(img, points[partA], points[partB], (255, 255, 255), thickness=80, lineType=cv2.FILLED)
         
         if show:
             cv2.imshow('Output-Contour', img)
