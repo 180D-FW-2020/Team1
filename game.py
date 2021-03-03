@@ -71,10 +71,10 @@ THREE_KEY = 51
 # WINDOW Definition 
 WINDOWNAME = 'Hole in the Wall!'
 if(OS == 'Darwin'): 
-    cv2.namedWindow(WINDOWNAME, cv2.WND_PROP_FULLSCREEN)
+    cv2.namedWindow(WINDOWNAME, cv2.WINDOW_NORMAL)
     cv2.setWindowProperty(WINDOWNAME,cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
 else:
-    cv2.namedWindow(WINDOWNAME, cv2.WND_PROP_FULLSCREEN)
+    cv2.namedWindow(WINDOWNAME, cv2.WINDOW_NORMAL)
     cv2.setWindowProperty(WINDOWNAME,cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
 
 MAC_ASPECT_RATIO = (1280, 720)
