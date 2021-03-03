@@ -1,7 +1,7 @@
-import paho.mqtt.client as mqtt
-import json
 import sys
+import json
 import datetime
+import paho.mqtt.client as mqtt
 from optparse import OptionParser
 from gesture_detector import gestureRecognizer
 
@@ -9,12 +9,12 @@ connection_string = "ece180d-team1-room-"
 accel_thres = 200
 keep_running = True
 
-usage_msg = '''%prog [mode] [username] [roomcode - multiplayer only]
-connect using username and roomcode from main game.'''
+usage_msg = '''%prog [mode] [nickname] [roomcode - multiplayer only]
+connect using nickname and roomcode from main game.'''
 
 parser = OptionParser(usage=usage_msg)
 parser.add_option('-m', '--mode', dest='mode', default='s', help='single player \'s\' or multiplayer \'m\', default = single player', metavar="MODE")
-parser.add_option('-u', '--username', dest='username', default='', help='use same username as main game', metavar="USER")
+parser.add_option('-n', '--nickname', dest='nickname', default='', help='use same nickname as main game', metavar="USER")
 parser.add_option('-r', '--roomcode', dest='roomcode', default='', help='use same roomcode as main game', metavar="ROOM")
 
 options, args = parser.parse_args(sys.argv[1:]) 
@@ -22,13 +22,13 @@ options, args = parser.parse_args(sys.argv[1:])
 if options.mode != 's' and options.mode != 'm': 
     parser.error("Please select a valid mode: single player \'s\' or multiplayer \'m\'")
 
-#multiplayer mode (room code)
-if options.roomcode != '': #todo: check if room code is 6 characters 
+#multiplayer mode (room code and nickname required)
+if options.roomcode != '': 
     if len(options.roomcode) != 6: 
         parser.error("Please enter a 6 character room code for multiplayer mode.")
-    if options.username == '':
-        parser.error("Please enter username for multiplayer mode.")
-    username = str(options.username)
+    if options.nickname == '':
+        parser.error("Please enter nickname for multiplayer mode.")
+    nickname = str(options.nickname)
     roomcode = str(options.roomcode) 
     connection_string += roomcode
     print("Welcome to multiplayer Hole-in-the-Wall!")
@@ -36,10 +36,10 @@ elif options.roomcode == '' and options.mode == 'm':
     parser.error("Please enter roomcode for multiplayer mode.")
 # single player mode 
 elif options.roomcode == '' and options.mode == 's': 
-    if options.username != '': 
-        username = str(options.username) 
+    if options.nickname != '': 
+        nickname = str(options.nickname) 
     else: 
-        username = "singleplayer"
+        nickname = "singleplayer"
     print("Welcome to single player Hole-in-the-Wall!")
 
 # 0. define callbacks - functions that run when events happen.
@@ -67,7 +67,6 @@ def on_message(client, userdata, message):
     packet = json.loads(message.payload)
     if "disconnect" in packet:
         keep_running = False
-        
 
 if __name__ == "__main__": 
     # 1. create a client instance.
@@ -86,15 +85,11 @@ if __name__ == "__main__":
         
     # 3. call one of the loop*() functions to maintain network traffic flow with the broker.
     client.loop_start()
-    # client.loop_forever()
-
-    # print(username, roomcode, connection_string)
 
     print("Calibrating acceleration... ")
 
     count = 0 
     accel_base = 0 
-
     start = datetime.datetime.now()
     elapsed_ms = 0
     previous_elapsed_ms = 0
@@ -111,24 +106,21 @@ if __name__ == "__main__":
     print("Base acceleration: " + str(accel_base)) 
 
     while keep_running:
-        # method for sending a gesture
+        # checks if acceleration threshold has been passed 
         check = [] + n.collect() 
         accel_sum = (abs(check[0]) + abs(check[1]) + abs(check[2])) / 3
         if(accel_sum - accel_base > accel_thres): 
             print("Detected motion...")
+            # classifies gesture and sends to main game through mqtt 
             prediction = n.classify()
-            # print(prediction)
             if(prediction != "negative_trim" and last_classification != prediction): 
                 packet = {
-                    "username": username,
+                    "username": nickname,
                     "gesture": prediction
                 }
                 client.publish(connection_string, json.dumps(packet), qos=1)
             last_classification = prediction
         pass
 
-    # use subscribe() to subscribe to a topic and receive messages.
-    # use publish() to publish messages to the broker.
-    # use disconnect() to disconnect from the broker.
     client.loop_stop()
     client.disconnect()

@@ -4,10 +4,9 @@ import math
 import IMU
 import datetime
 import os
-import pandas as pd 
-import utils 
+import csv
 
-accel_thres = 200
+accel_thres = 200       # if passed, triggers data collection 
 
 SAMPLE_RATE_HZ = 100
 QUATERNION_SCALE = (1.0 / (1<<14))
@@ -45,6 +44,7 @@ mag_medianTable2X = [1] * MAG_MEDIANTABLESIZE
 mag_medianTable2Y = [1] * MAG_MEDIANTABLESIZE
 mag_medianTable2Z = [1] * MAG_MEDIANTABLESIZE
 
+# collects data from accelerometer, magnetometer, and gyroscope  
 def collect(): 
     global ACC_LPF_FACTOR, ACC_MEDIANTABLESIZE, oldXAccRawValue, oldYAccRawValue, oldZAccRawValue
     global MAG_LPF_FACTOR, MAG_MEDIANTABLESIZE, oldXMagRawValue, oldYMagRawValue, oldZMagRawValue
@@ -154,6 +154,19 @@ def collect():
 
     return accel + mag + gyro + euler + quaternion + lin_accel + gravity 
 
+# initialize sensor column labels 
+def get_sensor_headers():
+    header = []
+    for sensor in ["accel_ms2", "mag_uT", "gyro_degs", "euler_deg",
+                   "quaternion",
+                   "lin_accel_ms2", "gravity_ms2"]:
+        if sensor is "quaternion":
+            header.append(sensor + "_w")
+        header.append(sensor + "_x")
+        header.append(sensor + "_y")
+        header.append(sensor + "_z")
+    return header
+
 IMU.detectIMU()     #Detect if BerryIMU is connected.
 if(IMU.BerryIMUversion == 99):
     print(" No BerryIMU found... exiting ")
@@ -161,7 +174,7 @@ if(IMU.BerryIMUversion == 99):
 IMU.initIMU()       #Initialise the accelerometer, gyroscope and compass
 
 i = 0
-header = ["time_ms", "delta_ms"] + utils.get_sensor_headers()
+header = ["","time_ms", "delta_ms"] + get_sensor_headers()
 
 filename = input("Name the folder where data will be stored: ")
 if not os.path.exists(filename):
@@ -171,6 +184,8 @@ starting_index = int(input("What number should we start on? "))
 duration_s = float(input("Please input how long should a sensor trace be in seconds (floats OK): "))
 
 i = starting_index
+
+# calibrate acceleration before collecting data to not trigger accel_thres mistakenly
 
 print("Calibrating acceleration... ")
 
@@ -191,29 +206,35 @@ while elapsed_ms < duration_s * 1000 * 3:
 accel_base = accel_base/count 
 
 print("Base acceleration: " + str(accel_base))
-
 print("Collecting file " + str(i)+ ". Make a movement continue...")
 
+# collect as many samples as needed 
 while True:
+    # checks if acceleration threshold has been passed 
     check = [] + collect() 
     accel_sum = (abs(check[0]) + abs(check[1]) + abs(check[2])) / 3
     if(accel_sum - accel_base > accel_thres): 
         print("Motion detected, Acceleration: " + str(accel_sum)) 
         print("Acceleration change: " + str(accel_sum - accel_base))
-        # input("Collecting file " + str(i)+ ". Press Enter to continue...")
         start = datetime.datetime.now()
         elapsed_ms = 0
         previous_elapsed_ms = 0
-
         data = []
+        count = 0
+
+        # collect data for the specified duration 
         while elapsed_ms < duration_s * 1000:
-            row = [elapsed_ms, int(elapsed_ms - previous_elapsed_ms)] + collect() # heading, roll, pitch, sys, gyro, accel, mag]
+            row = [count, elapsed_ms, int(elapsed_ms - previous_elapsed_ms)] + collect() # heading, roll, pitch, sys, gyro, accel, mag]
             data.append(row)
             previous_elapsed_ms = elapsed_ms
             elapsed_ms = (datetime.datetime.now() - start).total_seconds() * 1000
+            count += 1
 
+        # write data collected to a csv file for training 
         file_name = filename + "/" + filename + '{0:03d}'.format(i) + ".csv"
-        df = pd.DataFrame(data, columns = header)
-        df.to_csv(file_name, header=True)
+        with open(file_name, 'wt') as fp: 
+            writer = csv.writer(fp, delimiter=',')
+            writer.writerow(header)
+            writer.writerows(data)
         i += 1
         print("Collecting file " + str(i)+ ". Make a movement continue...")

@@ -186,6 +186,7 @@ class Game():
         self.nickname = []
         self.bucket = None
         self.creator = 0 # 1 for creator, 0 for joiner 
+        self.room_code = ''
         self.room_name = '' 
         self.multi_start = 0 # 1 to start game (creator tells the rest)
 
@@ -733,7 +734,7 @@ class Game():
                     cv2.imshow(WINDOWNAME, frame)
             return
         elif screen_type == 'no_room':
-            cv2.putText(frame, "Room {}".format(ROOM+''.join(self.room)),self.rescale((140,220)), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Room {}".format(self.room_name),self.rescale((140,220)), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.putText(frame, "does not exist. Please try again later.",self.rescale((140,240)), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             while True:
@@ -744,7 +745,7 @@ class Game():
                 elif key == ENTER_KEY:
                     self.multiplayer()
         elif screen_type == 'could_not_create':
-            cv2.putText(frame, "Could not create room. Please try again.".format(ROOM+''.join(self.room)),self.rescale((140,220)), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Could not create room. Please try again.".format(self.room_name),self.rescale((140,220)), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             while True:
                 key = cv2.waitKey(0)
@@ -788,7 +789,7 @@ class Game():
                     cv2.putText(frame, "{} is in the lobby.".format(value),self.rescale((200,240 + i*25)), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     i += 1
                 cv2.putText(frame, "Press Enter to Start the Game.",self.rescale((140,200)), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
-                cv2.putText(frame, "You're in room \'{}\'.".format(''.join(self.room)),self.rescale((140,220)), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                cv2.putText(frame, "You're in room \'{}\'.".format(self.room_code),self.rescale((140,220)), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                 cv2.imshow(WINDOWNAME, frame)
                 key = cv2.waitKey(10)
                 if key == ESC_KEY:
@@ -815,7 +816,7 @@ class Game():
                 i = 0
                 if len(self.lobby_users) > 0:
                     cv2.putText(frame, "Please wait for {} to start the game.".format(self.lobby_users[0]),self.rescale((140,200)), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
-                    cv2.putText(frame, "You're in room \'{}\'.".format(''.join(self.room)),self.rescale((140,220)), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "You're in room \'{}\'.".format(self.room_code),self.rescale((140,220)), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     for cur_user in self.lobby_users:
                         cv2.putText(frame, "{} is in the lobby.".format(cur_user),self.rescale((200,240 + i*25)), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                         i += 1
@@ -1433,11 +1434,12 @@ class Game():
     def multiplayer(self):
         self.show_screen('room')
         self.show_screen('nickname') 
-        self.room_name = ROOM + ''.join(self.room)
+        self.room_code = ''.join(self.room)
+        self.room_name = ROOM + self.room_code
         print(self.room_name)
         self.createaws()
         if raspi: 
-            self.remote_connection.set_conn_info('m', self.nickname, ''.join(self.room))
+            self.remote_connection.set_conn_info('m', self.nickname, self.room_code)
             x = threading.Thread(target = self.remote_connection.run, daemon=True)
             x.start()
         if self.creator == 1:

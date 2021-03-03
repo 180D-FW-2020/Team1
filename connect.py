@@ -10,7 +10,7 @@ class rpi_conn():
         self.user = user 
         self.password = password
         self.connected = False
-        self.username = ''
+        self.nickname = ''
         self.roomcode = ''
         self.mode = ''
         self.parameters = ''
@@ -27,15 +27,15 @@ class rpi_conn():
         self.connected = True
         print("connected to Raspberry Pi")
 
-    def set_conn_info(self, mode='', username='', roomcode=''):       
+    def set_conn_info(self, mode='', nickname='', roomcode=''):       
         if mode == 'm': 
             self.mode = ' -m \'m\''
-        if username != '': 
-            self.username = ' -u \'' + username + '\''
+        if nickname != '': 
+            self.nickname = ' -n \'' + nickname + '\''
         if roomcode != '': 
             self.roomcode = ' -r \'' + roomcode + '\''
 
-        self.parameters = self.mode + self.roomcode + self.username  
+        self.parameters = self.mode + self.roomcode + self.nickname  
 
     def run(self):
         
