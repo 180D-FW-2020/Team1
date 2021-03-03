@@ -1439,7 +1439,6 @@ class Game():
                 bucket.delete()
             except:
                 print('deleting')
-        self.voice.stop()
         packet = {
             "username": 'cancel',
             "disconnect": 'please'
@@ -1452,6 +1451,7 @@ class Game():
         cv2.destroyAllWindows()
         self.client_mqtt.loop_stop()
         self.client_mqtt.disconnect() 
+        self.voice.stop()
         
 def main():
     game = Game()

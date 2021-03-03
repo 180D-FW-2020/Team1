@@ -19,7 +19,7 @@ class commandRecognizer:
     
     def stop(self):
         try: #Older versions of pyaudio do not have this option
-            self.stop_listening(wait_for_stop=True)
+            self.stop_listening(wait_for_stop=False)
         except:
             self.stop_listening()
 
