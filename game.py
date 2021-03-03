@@ -315,7 +315,15 @@ class Game():
         if "send_my_pose" in packet and user != self.nickname:
             self.pose_updated = 1
             self.current_powerup = packet["send_my_pose"] 
-            self.pose = packet["pose"]
+            if OS == 'Darwin':
+                save_points = []
+                for point in points:
+                    if point == None:
+                        continue
+                    save_points.append(self.rescale(point))
+                self.pose = save_points
+            else: 
+                self.pose = packet["pose"]
             print(type(self.pose))
             print(packet["pose"])
             pass 
@@ -1146,10 +1154,10 @@ class Game():
                     cv2.putText(frame, "Time Remaining: {}".format(0), (10, 50), FONT, FONTSCALE, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                 else:
                     cv2.putText(frame, "Time Remaining: {}".format(time_remaining), (10, 50), FONT, FONTSCALE, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
-                if OS == 'Darwin':
-                    cv2.putText(frame, "Step in the Contour.", self.rescale((375, 50),'up'), FONT, FONTSCALE, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
-                else:
-                    cv2.putText(frame, "Step in the Contour.", (375, 50), FONT, FONTSCALE, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                # if OS == 'Darwin':
+                cv2.putText(frame, "Step in the Contour.", self.rescale((375, 50)), FONT, FONTSCALE, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                # else:
+                #     cv2.putText(frame, "Step in the Contour.", (375, 50), FONT, FONTSCALE, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                 cv2.imshow(WINDOWNAME, frame)
                 if time_remaining <= -1:
                     ## check their pose 
@@ -1317,7 +1325,7 @@ class Game():
             if self.TIMER_THRESHOLD > 5:
                 self.TIMER_THRESHOLD -= 2
     
-    def rescale(self, point, direction):
+    def rescale(self, point, direction = 'up'):
         if direction == 'up': # go from (480,640) --> aspect_ratio
             width = int(self.width*point[0]/640)
             height = int(self.height*point[1]/480)
@@ -1363,12 +1371,24 @@ class Game():
                         cv2.circle(frame, tuple(point1), 8, self.PoseEstimator.SKELETON_POINTCOLOR, thickness=-1, lineType=cv2.FILLED)
                 cv2.imshow(WINDOWNAME, frame)
                 cv2.waitKey(2000)
-                self.send_my_pose = 0                    
-                packet = {
-                    "username": self.nickname,
-                    "send_my_pose": self.current_powerup,
-                    "pose": points
-                }
+                self.send_my_pose = 0          
+                if OS == 'Darwin':
+                    send_points = []
+                    for point in points:
+                        if point == None:
+                            continue
+                        send_points.append(self.rescale(point,'down'))
+                    packet = {
+                        "username": self.nickname,
+                        "send_my_pose": self.current_powerup,
+                        "pose": send_points
+                    }
+                else:    
+                    packet = {
+                        "username": self.nickname,
+                        "send_my_pose": self.current_powerup,
+                        "pose": points
+                    }
                 self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
                 return
         pass 
