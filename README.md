@@ -13,14 +13,14 @@ Download and change [key.py](https://drive.google.com/file/d/1E3bpf4huUrUgIFHYl_
 If you're on a MAC: 
 ```
 chmod +x setup.sh 
-./setup.sh
+./setup_mac.sh
 conda activate hitw
 pip install pyaudio
 ```
 If you're on a PC:  
  
 ```
-./setup.sh
+./setup_win.sh
 conda activate hitw
 pip install pipwin 
 pipwin install pyaudio

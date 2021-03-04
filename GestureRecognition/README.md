@@ -8,14 +8,7 @@
 | `calibrateBerryIMU.py` | Calibration code from BerryIMU. |
 | `README.md` | This file with usage and documentation. |
 | `requirements.txt` | Dependency information. |
-| `utils.py` | Utility functions used by both collect_data.py and gesture_detector.py to collect data. |
-
-# Bugs 
-- Double Tap and Tap Gestsures get confused ~15% of the time. 
-
-# TODO
-- Add more gestures 
-- Refine current model by generating more samples from different people. 
+| `setup.sh` | Setup script to install all dependencies. |
 
 # Sources
 - Collecting data using [OzzMaker BerryIMUv3 (LSM6DSL and LIS3MDL)](http://ozzmaker.com/berryimu) 
@@ -32,10 +25,13 @@ chmod +x setup.sh
 ```
 
 # Running the Game
-'
 ```
 source activate hitw
 python mqtt.py #single player 
-python mqtt.py -m 'm' -r 'insert 6 character room code' -u 'insert nickname' #multiplayer
+python mqtt.py -r 'insert 6 character room code' -n 'insert nickname' #multiplayer
 ```
+
+# TODO
+- Refine current model by generating more samples from different people. 
+- Speed up the loading of the machine learning model. 
 

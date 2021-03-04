@@ -41,13 +41,13 @@ try:
     port = key.port
     user = key.user 
     password = key.password
-    raspi = True 
+    raspi = {'success': True} 
 except AttributeError:
     ip = ''
     port = ''
     user = ''
     password = ''
-    raspi = False 
+    raspi = {'success': False} 
     print('No Raspberry Pi detected, check key.py to verify connection information.')
 
 # DEBUG: 
@@ -119,6 +119,7 @@ if DEBUG == 1:
 
 class Game():
     def __init__(self):
+        global raspi
 
         # Capturing Video
         self.cap = cv2.VideoCapture(0)
@@ -156,9 +157,10 @@ class Game():
         self.num_users = 0
 
         # Raspberry Pi 
-        if raspi: 
+        if raspi['success']: 
+            raspi['success'] = False 
             self.remote_connection = rpi_conn(ip, port, user, password)
-            x = threading.Thread(target = self.remote_connection.connect, daemon=True)
+            x = threading.Thread(target = self.remote_connection.connect, args=(raspi,), daemon=True)
             x.start()
 
         # powerups
@@ -186,6 +188,7 @@ class Game():
         self.nickname = []
         self.bucket = None
         self.creator = 0 # 1 for creator, 0 for joiner 
+        self.room_code = ''
         self.room_name = '' 
         self.multi_start = 0 # 1 to start game (creator tells the rest)
 
@@ -733,7 +736,7 @@ class Game():
                     cv2.imshow(WINDOWNAME, frame)
             return
         elif screen_type == 'no_room':
-            cv2.putText(frame, "Room {}".format(ROOM+''.join(self.room)),self.rescale((140,220)), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Room {}".format(self.room_name),self.rescale((140,220)), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.putText(frame, "does not exist. Please try again later.",self.rescale((140,240)), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             while True:
@@ -744,7 +747,7 @@ class Game():
                 elif key == ENTER_KEY:
                     self.multiplayer()
         elif screen_type == 'could_not_create':
-            cv2.putText(frame, "Could not create room. Please try again.".format(ROOM+''.join(self.room)),self.rescale((140,220)), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+            cv2.putText(frame, "Could not create room. Please try again.".format(self.room_name),self.rescale((140,220)), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
             cv2.imshow(WINDOWNAME, frame)
             while True:
                 key = cv2.waitKey(0)
@@ -788,7 +791,7 @@ class Game():
                     cv2.putText(frame, "{} is in the lobby.".format(value),self.rescale((200,240 + i*25)), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     i += 1
                 cv2.putText(frame, "Press Enter to Start the Game.",self.rescale((140,200)), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
-                cv2.putText(frame, "You're in room \'{}\'.".format(''.join(self.room)),self.rescale((140,220)), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                cv2.putText(frame, "You're in room \'{}\'.".format(self.room_code),self.rescale((140,220)), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                 cv2.imshow(WINDOWNAME, frame)
                 key = cv2.waitKey(10)
                 if key == ESC_KEY:
@@ -815,7 +818,7 @@ class Game():
                 i = 0
                 if len(self.lobby_users) > 0:
                     cv2.putText(frame, "Please wait for {} to start the game.".format(self.lobby_users[0]),self.rescale((140,200)), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
-                    cv2.putText(frame, "You're in room \'{}\'.".format(''.join(self.room)),self.rescale((140,220)), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
+                    cv2.putText(frame, "You're in room \'{}\'.".format(self.room_code),self.rescale((140,220)), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                     for cur_user in self.lobby_users:
                         cv2.putText(frame, "{} is in the lobby.".format(cur_user),self.rescale((200,240 + i*25)), FONT, .5, FONTCOLORDEFAULT, FONTSIZE, lineType=cv2.LINE_AA)
                         i += 1
@@ -1310,9 +1313,9 @@ class Game():
         while self.difficulty == -1:
             self.show_screen('difficulty')
         self.client_mqtt.subscribe(ROOM, qos=1)
-        if raspi: 
-            x = threading.Thread(target = self.remote_connection.run, daemon=True)
-            x.start()
+        if raspi['success']: 
+            self.x = threading.Thread(target = self.remote_connection.run, daemon=True)
+            self.x.start()
         while True:
             self.level_number += 1
             self.slow_down_used = False
@@ -1433,13 +1436,14 @@ class Game():
     def multiplayer(self):
         self.show_screen('room')
         self.show_screen('nickname') 
-        self.room_name = ROOM + ''.join(self.room)
+        self.room_code = ''.join(self.room)
+        self.room_name = ROOM + self.room_code
         print(self.room_name)
         self.createaws()
-        if raspi: 
-            self.remote_connection.set_conn_info('m', self.nickname, ''.join(self.room))
-            x = threading.Thread(target = self.remote_connection.run, daemon=True)
-            x.start()
+        if raspi['success']: 
+            self.remote_connection.set_conn_info('m', self.nickname, self.room_code)
+            self.x = threading.Thread(target = self.remote_connection.run, daemon=True)
+            self.x.start()
         if self.creator == 1:
             self.creator_code()
         else: # regular user 
@@ -1471,6 +1475,7 @@ class Game():
             exit(1)
 
     def __del__(self):
+        self.voice.stop()
         if self.mode == 1 and self.room_name != '' and len(self.nickname) > 0 and self.creator == 1:
             try: 
                 s3 = boto3.resource(
@@ -1484,14 +1489,16 @@ class Game():
                 bucket.delete()
             except:
                 print('deleting')
-        packet = {
-            "username": 'cancel',
-            "disconnect": 'please'
-        }
-        if raspi: 
-            self.client_mqtt.publish(ROOM, json.dumps(packet), qos=1)
-        else: 
-            self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
+        if raspi['success']: 
+            packet = {
+                "username": 'cancel',
+                "disconnect": 'please'
+            }
+            if self.mode == 0: 
+                self.client_mqtt.publish(ROOM, json.dumps(packet), qos=1)
+            elif self.mode == 1: 
+                self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
+            self.x.join()
         self.cap.release() 
         cv2.destroyAllWindows()
         self.client_mqtt.loop_stop()

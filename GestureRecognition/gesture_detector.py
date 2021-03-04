@@ -3,11 +3,9 @@ import sys
 import os
 import IMU
 import datetime
-from pandas import DataFrame 
-import utils
+import numpy as np 
 from joblib import load
-
-model = load(os.path.join(curdir, 'models', '267pt_model.joblib')) 
+from sklearn import preprocessing
 
 CHECK_TIME_INCREMENT_MS = 200
 SAMPLE_SIZE_MS = 1500
@@ -58,15 +56,15 @@ class gestureRecognizer:
 
         print('Starting operation')
 
-        self.i = 0
-        self.header = ["time_ms", "delta_ms"] + utils.get_sensor_headers()
-        self.data = [] 
+        self.header = ["time_ms", "delta_ms"] + self.get_sensor_headers()
         self.maxlen = int(SAMPLE_SIZE_MS / 10)
-        self.start = datetime.datetime.now()
         self.elapsed_ms = 0
         self.previous_elapsed_ms = 0
         self.last_classified = 0
         self.last_classification = "negative_trim"
+        self.min_max_scaler = preprocessing.MinMaxScaler()
+        self.model = load(os.path.join(curdir, 'models', '267pt_model.joblib')) 
+        self.start = datetime.datetime.now()
 
     def collect(self): 
         global ACC_LPF_FACTOR, ACC_MEDIANTABLESIZE, oldXAccRawValue, oldYAccRawValue, oldZAccRawValue
@@ -177,26 +175,43 @@ class gestureRecognizer:
 
         return accel + mag + gyro + euler + quaternion + lin_accel + gravity 
 
+    # initialize sensor column labels 
+    def get_sensor_headers(self):
+        header = []
+        for sensor in ["accel_ms2", "mag_uT", "gyro_degs", "euler_deg",
+                    "quaternion",
+                    "lin_accel_ms2", "gravity_ms2"]:
+            if sensor is "quaternion":
+                header.append(sensor + "_w")
+            header.append(sensor + "_x")
+            header.append(sensor + "_y")
+            header.append(sensor + "_z")
+        return header
+    
     def classify(self): 
-        global model, CHECK_TIME_INCREMENT_MS
+        global CHECK_TIME_INCREMENT_MS
+        data = [] 
+        df = {}
 
+        # collects 1.5s of data and predicts gesture based on model
         while True: 
             row = [self.elapsed_ms, int(self.elapsed_ms - self.previous_elapsed_ms)] + self.collect()
-            self.data.append(row)
+            data.append(row)
             self.previous_elapsed_ms = self.elapsed_ms
+            
+            if self.elapsed_ms - self.last_classified >= CHECK_TIME_INCREMENT_MS and len(data) == self.maxlen:
+                # get data in columnwise fashion 
+                for j in range(len(self.header)):
+                    column = []
+                    for i in range(len(data)):
+                        column.append(data[i][j]) 
+                    df[self.header[j]] = np.array(column) 
+                
+                features = self.get_model_features(df) + [0]
+                prediction = self.model.predict([features])[0]
 
-            if self.elapsed_ms - self.last_classified >= CHECK_TIME_INCREMENT_MS and len(self.data) == self.maxlen:
-                df = DataFrame(list(self.data), columns=self.header)
-                features = utils.get_model_features(df) + [0]
-                # for i in features: 
-                #     print(i)
-                prediction = model.predict([features])[0]
-
-                #print(int(elapsed_ms), prediction)
                 if prediction != 'negative_trim' and self.last_classification != prediction:
                     print("========================>", prediction)
-                
-                self.data.clear()
 
                 self.last_classified = self.elapsed_ms
                 self.last_classification = prediction 
@@ -206,6 +221,53 @@ class gestureRecognizer:
             self.elapsed_ms = (datetime.datetime.now() - self.start).total_seconds() * 1000
 
         return str(self.last_classification)
+
+    def get_model_features(self, trace, generate_feature_names=False):
+        features = []
+        trace["accel"] = np.linalg.norm(
+            (trace["accel_ms2_x"], trace["accel_ms2_y"], trace["accel_ms2_z"]),
+            axis=0)
+        trace["gyro"] = np.linalg.norm(
+            (trace['gyro_degs_x'], trace['gyro_degs_y'], trace['gyro_degs_z']),
+            axis=0)
+
+        for sensor in ['accel', 'gyro']:
+            features_temp = self.get_features(trace[sensor], generate_feature_names)
+            if generate_feature_names:
+                features.extend([x + '_' + sensor for x in features_temp])
+            else:
+                features.extend(features_temp)
+
+        if generate_feature_names:
+            features.append('accel_z_peaks')
+        else:
+            normalized = self.min_max_scaler.fit_transform(
+                trace['accel_ms2_z'].reshape(-1, 1).astype(np.float))[:, 0]  # normalize
+            normalized = normalized[0:len(normalized):5]  # subsample
+            normalized = np.diff(
+                (normalized > 0.77).astype(int))  # convert to binary classifier
+            normalized = normalized[normalized > 0]
+            features.append(sum(normalized))
+            normalized = self.min_max_scaler.fit_transform(
+                trace['gyro_degs_z'].reshape(-1, 1).astype(np.float))[:, 0]  # normalize
+            normalized = normalized[0:len(normalized):5]  # subsample
+            normalized = np.diff(
+                (normalized > 0.77).astype(int))  # convert to binary classifier
+            normalized = normalized[normalized > 0]
+            features.append(sum(normalized))
+
+        return features
+
+    def get_features(self, series, generate_feature_names=False):
+        if generate_feature_names:
+            return ['max', 'min', 'range', 'mean', 'std']
+        features = []
+        features.append(max(series))
+        features.append(min(series))
+        features.append(max(series) - min(series))
+        features.append(series.mean())
+        features.append(series.std())
+        return features
 
 # n = gestureRecognizer() 
 
