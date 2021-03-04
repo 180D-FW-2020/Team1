@@ -366,7 +366,7 @@ class Game():
                         "round_num": self.round_num,
                         "pictures": True
                     }
-                    self.round_num = 0
+                    
                 else:
                     packet = {
                         "username": self.nickname,
@@ -375,11 +375,12 @@ class Game():
                         "winner": self.round_score_leader,
                         "round_num": self.round_num
                     }
+                    
                 self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
                 self.round_scores = {}
                 self.max_multi_score_round = -1 
                 self.round_score_leader = ''
-                self.round_num += 1
+                
         if "player_left" in packet:
             self.show_screen('', generic_txt='Someone left the game. Ending game now.')
             self.game()
@@ -408,6 +409,11 @@ class Game():
             if packet["winner"] == self.nickname:
                 pose = 'pose' + str(self.round_num) + '.jpg'
                 self.client_aws.upload_file('pose.jpg', self.room_name, pose)
+            if self.creator == 1:
+                if self.round_num >= self.num_users:
+                    self.round_num = 0
+                else: 
+                    self.round_num += 1    
         if "lobby_users" in packet and self.creator == 0:
             self.lobby_users = packet["lobby_users"]
 
