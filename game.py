@@ -1498,7 +1498,7 @@ class Game():
                 self.client_mqtt.publish(ROOM, json.dumps(packet), qos=1)
             elif self.mode == 1: 
                 self.client_mqtt.publish(self.room_name, json.dumps(packet), qos=1)
-        self.x.join()
+            self.x.join()
         self.cap.release() 
         cv2.destroyAllWindows()
         self.client_mqtt.loop_stop()
