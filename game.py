@@ -343,7 +343,6 @@ class Game():
 
             if len(self.round_scores) == self.num_users:
                 ## round is over 
-                self.round_num += 1
                 self.move_on = 1
                 total = 0 
                 for key, value in self.round_scores.items():
@@ -358,7 +357,7 @@ class Game():
                 for w in sorted_keys:
                     sorted_totals[w] = self.total_scores[w]
 
-                if self.round_num >= self.num_users + 1:
+                if self.round_num >= self.num_users:
                     packet = {
                         "username": self.nickname,
                         "round_over": total,
@@ -380,6 +379,7 @@ class Game():
                 self.round_scores = {}
                 self.max_multi_score_round = -1 
                 self.round_score_leader = ''
+                self.round_num += 1
         if "player_left" in packet:
             self.show_screen('', generic_txt='Someone left the game. Ending game now.')
             self.game()
@@ -491,7 +491,7 @@ class Game():
             self.client_aws.download_file(self.room_name, 'pose'+ str(user) + '.jpg', 'pose'+ str(user) + '.jpg')
             pic = cv2.imread('pose'+ str(user) + '.jpg')
             pics.append(pic)
-        if (self.num_users) % 2 == 1: # then concatenate first half + 1 vertically and next one vertically
+        if (self.num_users+1) % 2 == 1: # then concatenate first half + 1 vertically and next one vertically
             left = pics[0]
             add = np.zeros(shape=left.shape, dtype=np.uint8)
             for i in range(1, int(len(pics)/2)):
