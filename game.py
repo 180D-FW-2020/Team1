@@ -380,6 +380,7 @@ class Game():
                 self.round_scores = {}
                 self.max_multi_score_round = -1 
                 self.round_score_leader = ''
+                return
                 
         if "player_left" in packet:
             self.show_screen('', generic_txt='Someone left the game. Ending game now.')
