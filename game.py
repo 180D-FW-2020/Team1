@@ -58,7 +58,10 @@ except AttributeError:
 DEBUG = 0
 
 # KEY Definitions
-BACK_KEY = 8
+if OS == "Darwin":
+    BACK_KEY = 127
+else: 
+    BACK_KEY = 8
 ENTER_KEY = 13
 ESC_KEY = 27
 UP_KEY = 38
