@@ -495,10 +495,13 @@ class Game():
     def show_pictures(self):
         pics = []
         for user in range(self.num_users+1):
-            self.client_aws.download_file(self.room_name, 'pose'+ str(user) + '.jpg', 'pose'+ str(user) + '.jpg')
-            pic = cv2.imread('pose'+ str(user) + '.jpg')
-            pics.append(pic)
-        if (self.num_users+1) % 2 == 1: # then concatenate first half + 1 vertically and next one vertically
+            try:
+                self.client_aws.download_file(self.room_name, 'pose'+ str(user) + '.jpg', 'pose'+ str(user) + '.jpg')
+                pic = cv2.imread('pose'+ str(user) + '.jpg')
+                pics.append(pic)
+            except:
+                print('could not download file {}'.format('pose'+ str(user) + '.jpg'))
+        if (len(pics)) % 2 == 1: # then concatenate first half + 1 vertically and next one vertically
             left = pics[0]
             add = np.zeros(shape=left.shape, dtype=np.uint8)
             for i in range(1, int(len(pics)/2)):
