@@ -7,16 +7,10 @@ We are implementing a virtual version of [Hole in the Wall](https://www.youtube.
 See requirements.txt
 
 # Installation for Users
+Make sure to have [anaconda](https://docs.anaconda.com/anaconda/install/) or [miniconda](https://docs.conda.io/en/latest/miniconda.html) installed before running the setup script. 
 Clone our [repo](https://github.com/180D-FW-2020/Team1). 
 Download and change [key.py](https://drive.google.com/file/d/1E3bpf4huUrUgIFHYl_1z13nRmQvIFrkn/view?usp=sharing) to your passwords + Raspberry Pi login information. Put in the main directory. 
 
-If you're on a MAC: 
-```
-chmod +x setup.sh 
-./setup_mac.sh
-conda activate hitw
-pip install pyaudio
-```
 If you're on a PC:  
  
 ```
@@ -25,7 +19,14 @@ conda activate hitw
 pip install pipwin 
 pipwin install pyaudio
 ```
-On the Raspberry Pi:
+If you're on a MAC: 
+```
+chmod +x setup.sh 
+./setup_mac.sh
+conda activate hitw
+pip install pyaudio
+```
+On the Raspberry Pi (optional):
 ```
 cd GestureRecognition 
 chmod +x setup.sh
