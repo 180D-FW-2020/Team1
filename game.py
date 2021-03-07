@@ -501,7 +501,9 @@ class Game():
                 pics.append(pic)
             except:
                 print('could not download file {}'.format('pose'+ str(user) + '.jpg'))
-        if (len(pics)) % 2 == 1: # then concatenate first half + 1 vertically and next one vertically
+        if len(pics) == 0:
+            pass
+        elif (len(pics)) % 2 == 1: # then concatenate first half + 1 vertically and next one vertically
             left = pics[0]
             add = np.zeros(shape=left.shape, dtype=np.uint8)
             for i in range(1, int(len(pics)/2)):
