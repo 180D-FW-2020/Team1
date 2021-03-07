@@ -494,7 +494,7 @@ class Game():
         self.show_screen('tutorial')
     def show_pictures(self):
         pics = []
-        for user in range(self.num_users):
+        for user in range(self.num_users+1):
             self.client_aws.download_file(self.room_name, 'pose'+ str(user) + '.jpg', 'pose'+ str(user) + '.jpg')
             pic = cv2.imread('pose'+ str(user) + '.jpg')
             pics.append(pic)
