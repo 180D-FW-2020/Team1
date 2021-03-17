@@ -80,6 +80,7 @@ else:
     cv2.namedWindow(WINDOWNAME, cv2.WINDOW_NORMAL)
     cv2.setWindowProperty(WINDOWNAME,cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
 
+WIN_ASPECT_RATIO = (640, 480)
 MAC_ASPECT_RATIO = (1280, 720)
 
 # FILESYSTEM Definitions 
@@ -911,6 +912,8 @@ class Game():
                                     cv2.line(frame, tuple(point1), tuple(point2), self.PoseEstimator.SKELETON_LINECOLOR, 2)
                                     cv2.circle(frame, tuple(point1), 8, self.PoseEstimator.SKELETON_POINTCOLOR, thickness=-1, lineType=cv2.FILLED)
                             cv2.imshow(WINDOWNAME, frame)
+                            if OS == 'Darwin':
+                                frame = cv2.resize(frame, WIN_ASPECT_RATIO)
                             cv2.imwrite('pose.jpg',frame)
                             key = cv2.waitKey(2000)
                             packet = {
@@ -1355,7 +1358,7 @@ class Game():
         self.powerup_used = 0 # set this when powerup is used
         self.move_on = 0
         start_time = time.perf_counter()
-        pose_num = random.randint(0,2)
+        pose_num = 2 # random.randint(0,2)
         gesture_name = self.multi_gesture_names[pose_num]
         self.generated_powerup = self.multi_powerups[pose_num]
         self.current_description = self.multi_description[pose_num]
